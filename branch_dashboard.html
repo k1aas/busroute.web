@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BusRoute — Route Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg:      #111418;
+    --surface: #1a1f27;
+    --card:    #222832;
+    --border:  #2e3542;
+    --green:   #2ecc71;
+    --green-dk:#1a7a4a;
+    --amber:   #f0a500;
+    --red:     #e74c3c;
+    --text:    #e8eaf0;
+    --mid:     #8a93a8;
+    --mono:    'JetBrains Mono', 'Fira Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+
+  .top-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 14px; height: 52px; }
+  .top-bar .logo { font-weight: 700; font-size: 16px; color: var(--green); }
+  .top-bar .company { font-size: 14px; color: var(--text); font-weight: 600; }
+  .top-bar .badge { font-size: 11px; color: var(--mid); background: var(--card); border-radius: 4px; padding: 2px 8px; }
+  .top-bar .spacer { flex: 1; }
+
+  .content { padding: 24px; max-width: 1100px; }
+
+  .stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; min-width: 130px; }
+  .stat-card .num { font-size: 28px; font-weight: 700; color: var(--green); line-height: 1; }
+  .stat-card .num.warn { color: var(--amber); }
+  .stat-card .num.bad  { color: var(--red); }
+  .stat-card .lbl { font-size: 11px; color: var(--mid); margin-top: 4px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  .mono { font-family: var(--mono); font-size: 12px; color: var(--green); }
+  .mid  { color: var(--mid); }
+
+  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .badge-ok   { background: rgba(46,204,113,.15); color: var(--green); }
+  .badge-warn { background: rgba(240,165,0,.15); color: var(--amber); }
+  .badge-err  { background: rgba(231,76,60,.15); color: var(--red); }
+
+  #act-map { height: 340px; border-radius: 8px; border: 1px solid var(--border); margin-top: 14px; }
+  .leaflet-tile { filter: brightness(.7) saturate(.8); }
+
+  #loading { display: flex; align-items: center; justify-content: center; min-height: 80vh; color: var(--mid); font-size: 15px; }
+  #error-screen { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+  .error-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 40px; max-width: 400px; text-align: center; }
+  .error-card h2 { color: var(--red); margin-bottom: 10px; }
+  .error-card p { color: var(--mid); font-size: 13px; }
+
+  #app { display: none; }
+
+  .seats-bar { background: var(--border); border-radius: 3px; height: 6px; margin-top: 6px; overflow: hidden; }
+  .seats-fill { background: var(--green); height: 100%; border-radius: 3px; transition: width .3s; }
+  .seats-fill.warn { background: var(--amber); }
+  .seats-fill.full { background: var(--red); }
+</style>
+</head>
+<body>
+
+<div id="loading">Loading route data…</div>
+<div id="error-screen" style="display:none">
+  <div class="error-card">
+    <h2>Dashboard not found</h2>
+    <p>This link may be invalid or expired. Contact your BusRoute administrator.</p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="top-bar">
+    <span class="logo">BusRoute</span>
+    <span class="company" id="co-name"></span>
+    <span class="badge" id="co-badge">Read-only</span>
+    <span class="spacer"></span>
+    <span class="mid" id="last-updated" style="font-size:12px"></span>
+  </div>
+
+  <div class="content">
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="card">
+      <div class="card-title">License keys</div>
+      <table id="keys-table">
+        <thead><tr><th>Key</th><th>Max devices</th><th>Active</th><th>Seats used</th><th>Expires</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Activation map</div>
+      <div id="act-map"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Recent activations</div>
+      <table id="act-table">
+        <thead><tr><th>When</th><th>Key</th><th>Status</th><th>Location (approx.)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// Token comes from URL path: /branch_dashboard.html?token=XXX
+// or the admin gives the branch manager the direct API URL which we proxy here
+const params = new URLSearchParams(location.search);
+const token  = params.get("token");
+const API_BASE = "https://osrm.busroute.app";
+
+async function load() {
+  if (!token) { showError(); return; }
+  try {
+    const r = await fetch(`${API_BASE}/api/dashboard/${token}`);
+    if (!r.ok) { showError(); return; }
+    const data = await r.json();
+    render(data);
+  } catch(e) {
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("error-screen").style.display = "flex";
+}
+
+function render(data) {
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("co-name").textContent = data.company;
+  document.getElementById("last-updated").textContent = "Updated " + new Date().toLocaleTimeString();
+  document.title = `BusRoute — ${data.company}`;
+
+  const acts = data.activations || [];
+  const keys = data.keys || [];
+  const today = new Date().toISOString().slice(0,10);
+
+  // Count active activations per key
+  const activeCount = {};
+  acts.filter(a => a.status === "active").forEach(a => {
+    activeCount[a.license_key] = (activeCount[a.license_key] || 0) + 1;
+  });
+  const overLimit = acts.filter(a => a.status === "over_limit").length;
+
+  // Stats
+  const totalSeats  = keys.reduce((s, k) => s + k.max_devices, 0);
+  const totalActive = Object.values(activeCount).reduce((s, n) => s + n, 0);
+  const expiredKeys = keys.filter(k => k.expires_on < today).length;
+
+  document.getElementById("stats-row").innerHTML = `
+    <div class="stat-card"><div class="num">${keys.length}</div><div class="lbl">License key${keys.length!==1?'s':''}</div></div>
+    <div class="stat-card"><div class="num">${totalActive}</div><div class="lbl">Active devices</div></div>
+    <div class="stat-card"><div class="num">${totalSeats}</div><div class="lbl">Total seats</div></div>
+    <div class="stat-card"><div class="num ${overLimit>0?'bad':''}">${overLimit}</div><div class="lbl">Over-limit attempts</div></div>
+    ${expiredKeys > 0 ? `<div class="stat-card"><div class="num warn">${expiredKeys}</div><div class="lbl">Expired keys</div></div>` : ''}
+  `;
+
+  // Keys table
+  const ktbody = document.querySelector("#keys-table tbody");
+  ktbody.innerHTML = keys.map(k => {
+    const active  = activeCount[k.key] || 0;
+    const pct     = Math.round(active / k.max_devices * 100);
+    const expired = k.expires_on < today;
+    const full    = active >= k.max_devices;
+    const fillCls = full ? "full" : pct > 75 ? "warn" : "";
+    const badge   = expired ? '<span class="badge badge-err">Expired</span>'
+                  : full    ? '<span class="badge badge-warn">Full</span>'
+                  :           '<span class="badge badge-ok">Active</span>';
+    return `<tr>
+      <td><span class="mono">${k.key}</span></td>
+      <td>${k.max_devices}</td>
+      <td>${active}</td>
+      <td>
+        <span style="font-size:12px;color:var(--mid)">${pct}%</span>
+        <div class="seats-bar"><div class="seats-fill ${fillCls}" style="width:${pct}%"></div></div>
+      </td>
+      <td class="mid">${k.expires_on}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join("");
+
+  // Activation map
+  const map = L.map("act-map").setView([44, -79], 6);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  const byLoc = {};
+  acts.forEach(a => {
+    if (!a.lat_grid || !a.lng_grid) return;
+    const k = `${a.lat_grid},${a.lng_grid}`;
+    if (!byLoc[k]) byLoc[k] = { lat: a.lat_grid, lng: a.lng_grid, count: 0, over: 0 };
+    byLoc[k].count++;
+    if (a.status === "over_limit") byLoc[k].over++;
+  });
+
+  Object.values(byLoc).forEach(pt => {
+    const color = pt.over > 0 ? "#e74c3c" : "#2ecc71";
+    const r = Math.min(6 + pt.count * 2, 18);
+    L.circleMarker([pt.lat, pt.lng], { radius: r, fillColor: color, color: color, fillOpacity: 0.7, weight: 1 })
+      .bindPopup(`Activations: ${pt.count}${pt.over > 0 ? `<br>⚠️ ${pt.over} over-limit` : ""}`)
+      .addTo(map);
+  });
+
+  // Activations table (last 50)
+  const atbody = document.querySelector("#act-table tbody");
+  atbody.innerHTML = acts.slice(0,50).map(a => {
+    const badge = a.status === "active"     ? '<span class="badge badge-ok">active</span>'
+                : a.status === "over_limit" ? '<span class="badge badge-err">over limit</span>'
+                : a.status === "expired"    ? '<span class="badge badge-warn">expired</span>'
+                :                             `<span class="badge">${a.status}</span>`;
+    const loc = (a.lat_grid && a.lng_grid)
+      ? `${a.lat_grid.toFixed(1)}°N  ${Math.abs(a.lng_grid).toFixed(1)}°W`
+      : "—";
+    return `<tr>
+      <td class="mid" style="white-space:nowrap">${(a.activated_on||"").slice(0,16).replace("T"," ")}</td>
+      <td><span class="mono">${a.license_key}</span></td>
+      <td>${badge}</td>
+      <td class="mid" style="font-size:12px">${loc}</td>
+    </tr>`;
+  }).join("");
+}
+
+load();
+</script>
+</body>
+</html>
