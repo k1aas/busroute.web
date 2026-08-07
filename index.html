@@ -132,7 +132,68 @@
   .price-unit { color: #c0d0dd; font-size: 0.9rem; }
   .price-note { color: #c0d0dd; font-size: 0.85rem; margin-top: 12px; width: 100%; }
 
-  footer {
+  .screens {
+    padding: 64px 32px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .screens-inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .screens h3 {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 12px;
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+  .screens h4 {
+    font-size: 1.6rem;
+    color: #fff;
+    margin-bottom: 40px;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  .screen-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+  .screen-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .phone-frame {
+    position: relative;
+    background: #111;
+    border-radius: 28px;
+    border: 3px solid rgba(255,255,255,0.12);
+    overflow: hidden;
+    aspect-ratio: 9 / 19.5;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .phone-frame img,
+  .phone-frame video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .screen-label {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 0.82rem;
+    color: var(--mid);
+    text-align: center;
+    line-height: 1.4;
+  }
+  @media (max-width: 600px) {
+    .screen-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .screens h4 { font-size: 1.3rem; }
+  }
     padding: 32px;
     border-top: 1px solid rgba(255,255,255,0.06);
     display: flex;
@@ -208,6 +269,62 @@
     <div>
       <h4>Safety and legal compliance</h4>
       <p>Requiring a substitute driver to navigate an unknown route with papers and maps in hand creates legal risk for the employer. BusRoute addresses this directly: the driver is guided, not distracted. CIPO Registered, Reg. No. 1245935.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Screenshots & video ──────────────────────────────────────── -->
+<section class="screens">
+  <div class="screens-inner">
+    <h3>App screens</h3>
+    <h4>What the driver actually sees</h4>
+    <div class="screen-grid">
+
+      <!-- SCREEN 1 — replace the src with your Cloudinary image URL -->
+      <div class="screen-item">
+        <div class="phone-frame">
+          <img src="https://res.cloudinary.com/tm8tnyav/image/upload/w_400/v1786132529/BusRoute_home_screen_dark_xtrh6d.jpg" alt="Home screen (dark)">
+        </div>
+        <p class="screen-label">Home screen, dark mode</p>
+      </div>
+
+      <!-- SCREEN 2 — replace the src with your Cloudinary image URL -->
+      <div class="screen-item">
+        <div class="phone-frame">
+          <img src="https://res.cloudinary.com/tm8tnyav/image/upload/w_400/v1786132528/BusRoute_home_screen_light_tlzn89.jpg" alt="Schedule deviation bar">
+        </div>
+        <p class="screen-label">Home screen, light mode</p>
+      </div>
+
+      <!-- SCREEN 3 — replace the src with your Cloudinary image URL -->
+      <div class="screen-item">
+        <div class="phone-frame">
+          <img src="REPLACE_WITH_CLOUDINARY_URL" alt="Edit run data screen">
+        </div>
+        <p class="screen-label">Route notes and safety flags per stop</p>
+      </div>
+
+      <!-- SCREEN 4 — replace the src with your Cloudinary image URL -->
+      <div class="screen-item">
+        <div class="phone-frame">
+          <img src="REPLACE_WITH_CLOUDINARY_URL" alt="Home screen">
+        </div>
+        <p class="screen-label">Home screen</p>
+      </div>
+
+      <!-- VIDEO — replace the src with your Cloudinary video URL (.mp4) -->
+      <!-- This plays silently on a loop as a live demo clip             -->
+      <div class="screen-item">
+        <div class="phone-frame">
+          <video
+            src="REPLACE_WITH_CLOUDINARY_VIDEO_URL.mp4"
+            autoplay muted loop playsinline
+            poster="REPLACE_WITH_CLOUDINARY_POSTER_IMAGE_URL">
+          </video>
+        </div>
+        <p class="screen-label">Approaching a stop — live demo</p>
+      </div>
+
     </div>
   </div>
 </section>
