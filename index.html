@@ -203,14 +203,25 @@
     max-width: 700px;
     margin: 0 auto;
   }
-  footer p { color: #8a9aaa; font-size: 0.85rem; margin-right: auto; }
-  footer a {
-    color: #c0d0dd;
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-family: 'Helvetica Neue', sans-serif;
-  }
-  footer a:hover { color: var(--amber); }
+  footer {
+  padding: 32px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+footer p { color: #8a9aaa; font-size: 0.75rem; }
+footer a {
+  color: #8a9aaa;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-family: 'Helvetica Neue', sans-serif;
+}
+footer a:hover { color: var(--amber); }
 </style>
 </head>
 <body>
@@ -340,7 +351,7 @@
 
 <footer>
   <p>© 2026 BusRoute. v0.9.47. Licensed on a per-driver annual basis. 2026 CAN$ prices</p>
-  <div style="margin-top:12px;display:flex;gap:24px;flex-wrap:wrap">
+  <div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center">
     <a href="privacy.html">Privacy policy</a>
     <a href="terms.html">Terms of service</a>
     <a href="mailto:klaas@busroute.app">Contact</a>
