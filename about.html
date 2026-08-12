@@ -1,112 +1,107 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>About Us</title>
-<style>
-  :root { --ink: #0d1b2a; --amber: #f5a623; --teal: #1a9e8a; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Georgia', serif; background: var(--ink); color: #e8edf2; }
-  header {
-    padding: 32px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    display: flex; align-items: center; gap: 16px;
-  }
-  header a { color: #6a8a9a; text-decoration: none; font-size: 0.85rem; font-family: sans-serif; }
-  header a:hover { color: var(--amber); }
-  header h1 { font-size: 1.4rem; color: #fff; margin-left: auto; }
-  main { max-width: 680px; margin: 0 auto; padding: 56px 32px 80px; }
-  .meta { font-size: 0.8rem; font-family: sans-serif; color: #4a6a7a; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 40px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — BusRoute</title>
+  <style>
+    :root { --ink: #0d1b2a; --amber: #f5a623; --teal: #1a9e8a; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Georgia', serif; background: var(--ink); color: #e8edf2; }
 
-  h2 { font-size: 1.8rem; color: #fff; margin-bottom: 32px; line-height: 1.2; }
-  section { margin-bottom: 36px; }
+    header {
+      padding: 32px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; gap: 16px;
+    }
+    header a { color: #6a8a9a; text-decoration: none; font-size: 0.85rem; font-family: sans-serif; }
+    header a:hover { color: var(--amber); }
+    header h1 { font-size: 1.4rem; color: #fff; margin-left: auto; }
 
-  section h3 {
-    font-family: 'Helvetica Neue', sans-serif;
-    font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--teal); margin-bottom: 14px;
-  }
+    main { max-width: 680px; margin: 0 auto; padding: 56px 32px 80px; }
 
-  p, li { font-size: 0.95rem; line-height: 1.75; color: #8aa0b0; margin-bottom: 10px; }
-  ul { padding-left: 20px; margin-top: 4px; }
-  li { margin-bottom: 6px; }
-  strong { color: #c8d8e8; font-weight: 600; }
-  .warning {
-    background: rgba(245, 166, 35, 0.08);
-    border-left: 3px solid var(--amber);
-    padding: 16px 20px;
-    border-radius: 0 8px 8px 0;
-    margin: 20px 0;
+    h2 { font-size: 1.8rem; color: #fff; margin-bottom: 32px; line-height: 1.2; }
+    section { margin-bottom: 36px; }
+    section h3 {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--teal); margin-bottom: 14px;
+    }
+    p, li { font-size: 0.95rem; line-height: 1.75; color: #8aa0b0; margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-top: 4px; }
+    li { margin-bottom: 6px; }
+    strong { color: #c8d8e8; font-weight: 600; }
 
-  }
-
-  .warning p { color: #b8a060; font-size: 0.9rem; margin: 0; }
-  footer {
-    max-width: 680px; margin: 0 auto; padding: 24px 32px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
-  }
-
-  footer p { color: #3a4a5a; font-size: 0.8rem; margin-right: auto; font-family: sans-serif; }
-  footer a { color: #6a8a9a; font-size: 0.8rem; text-decoration: none; font-family: sans-serif; }
-  footer a:hover { color: var(--amber); }
-
-</style>
+    footer {
+      max-width: 680px; margin: 0 auto; padding: 24px 32px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; flex-direction: column; align-items: center;
+      gap: 12px; text-align: center;
+    }
+    footer p { color: #8a9aaa; font-size: 0.75rem; text-align: center; margin-bottom: 8px; }
+    footer .footer-links { margin-bottom: 24px; }
+    footer a { color: #8a9aaa; font-size: 0.75rem; text-decoration: none; font-family: sans-serif; }
+    footer a:hover { color: var(--amber); }
+  </style>
 </head>
 <body>
 
-  <header>
-
-  <a href="about.html">← BusRoute</a>
-
-  <h1>About Us</h1>
-
+<header>
+  <a href="index.html">← BusRoute</a>
+  <h1>About</h1>
 </header>
 
 <main>
-
   <h2>A bit of history</h2>
-  
+
   <section>
     <h3>Background</h3>
-    <p>Klaas, the developer of this app, worked for a greater part of his careeer as an instructor for a large Medical
-      X-Ray company. During these years, he came across multiple occasions where the Service Reps he trained did 
-      not have the proper tools for equipment adjustment and image quality measurement. This led to the development
-      of software tools that utilized Excel macros and C++. These tools ended up being used extensively 
-      and worldwide.  </p>
+    <p>Klaas, the developer of this app, worked for a greater part of his career as an instructor
+    for a large medical X-ray company. During these years, he came across multiple occasions where
+    the service representatives he trained did not have the proper tools for equipment adjustment
+    and image quality measurement. This led to the development of software tools that utilized
+    Excel macros and C++. These tools ended up being used extensively and worldwide.</p>
   </section>
 
   <section>
-    <h3>How does this align with School Bus Driving?</h3>
-    <p>After retiring and taking on a job as a school bus driver in 2019, he noticed a glaring deficiency in
-    the way substitute bus driving was handled. Just as X-Ray Service Reps, bus drivers did not have the proper 
-    tools to do the job.</p> 
-    <p>This led to a search for a way to make substitute bus driving safer and less stressful. There are expensive
-    applications on the market that also solve some problems. However, they place a huge burden on the branch offices 
-    and transportation services. The quest was on to develop an inexpensive tool that did not burden anyone, was easy 
-    to use in the school bus industry as it functions in North America, Australia and New Zealand. </p>
+    <h3>How does this align with school bus driving?</h3>
+    <p>After retiring and taking on a job as a school bus driver in 2019, he noticed a glaring
+    deficiency in the way substitute bus driving was handled. Just as X-ray service representatives,
+    substitute drivers did not have the proper tools to do the job.</p>
+    <p>This led to a search for a way to make substitute bus driving safer and less stressful.
+    There are expensive applications on the market that also solve some problems, but they place a
+    significant burden on branch offices and transportation departments. The goal was to develop an
+    inexpensive tool that required no administration overhead and worked within the school bus
+    industry as it functions in North America.</p>
   </section>
-    
+
   <section>
-    <h3>Looking for a Solution</h3>
-    <p>After driving school bus for 7 years, Klaas had sufficient experience to be able to build a tool. This meant 
-    functioning as Subject Matter Expert, indicating how the User Interface should be, and also testing Quality Assurance. </p>
-    <p>The recent developments in AI made it possible to generate a functional JavaScript app of 10k lines of code 
-    that was extensively tested and streamlined within expo.dev and github.com. After many months, hundreds of 
-    builds and a huge amount of test drives, the app is now available for both Android and iPhone.</p>
+    <h3>Finding a solution</h3>
+    <p>After seven years of driving school bus, Klaas had sufficient experience to define what a
+    good solution would look like: serving as subject matter expert, shaping the user interface,
+    and carrying out quality assurance testing in the field.</p>
+    <p>Recent developments in AI made it possible to build a functional app of over 10,000 lines
+    of code, extensively tested through hundreds of builds and real-world test drives. The app is
+    now available for both Android and iPhone.</p>
   </section>
-<section>
-   <h3>What about the finances? </h3>
-  <p>In order to make this app usable for large and small school bus entities, the price is kept at a reasonable level.
-    The transport company purchases an access key that is then available for all drivers. Renewal occurs yearly 
-    for the price of a cup of coffee per driver. 
-  </p>
-</section>
-  
+
+  <section>
+    <h3>Pricing</h3>
+    <p>To make BusRoute accessible for bus companies of any size, the price is kept at a
+    straightforward level. The transport company purchases an access key that covers all drivers.
+    Renewal is yearly, and roughly the cost of a cup of coffee per driver.</p>
+  </section>
+</main>
+
 <footer>
-
-  <p>© 2026 BusRoute</p>
-  
+  <p>© 2026 BusRoute. All rights reserved.</p>
+  <div class="footer-links" style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center">
+    <a href="index.html">Home</a>
+    <a href="privacy.html">Privacy policy</a>
+    <a href="terms.html">Terms of service</a>
+    <a href="mailto:klaas@busroute.app">Contact</a>
+  </div>
 </footer>
+
+</body>
+</html>
