@@ -70,15 +70,17 @@
       the coordinates and returns routing instructions. No coordinate data is stored on the
       server after the response is returned.</li>
       <li><strong>Licence key activation</strong> — when a driver enters a licence key, the app
+      requests location permission before proceeding. GPS access is required for the app to
+      function — route recording and substitute guidance both depend on it entirely. The app
       contacts <strong>osrm.busroute.app/api/v1/activate</strong> and sends three items: the
       licence key, a randomly-generated device identifier (not linked to any hardware ID or
-      personal identity), and — if location permission has been granted — the device's
-      approximate GPS position at the moment of activation. The device identifier is what
-      enforces per-seat limits; each activation is counted against the seats purchased under
-      that key. The GPS position at activation, if available, is displayed on an activation
+      personal identity), and the device's GPS position at the moment of activation. The device
+      identifier is what enforces per-seat limits; each activation is counted against the seats
+      purchased under that key. The GPS position at activation is displayed on an activation
       map visible to both BusRoute administration and, through a dedicated dashboard, the bus
-      company that purchased the licence. The bus company can see where and when each driver
-      activated the app, along with a count of seats used. Activation coordinates are also
+      company that purchased the licence. The bus company can see the approximate location and
+      date of each driver's activation, along with a count of how many of their purchased
+      licence keys have been activated. Activation coordinates are also
       used to detect unusual patterns such as the same key being activated from geographically
       distant locations simultaneously. The device identifier and key are retained on the
       licensing server for the duration of the licence period.</li>
@@ -113,9 +115,12 @@
   <section>
     <h3>Permissions requested</h3>
     <ul>
-      <li><strong>Location (foreground and background)</strong> — required for stop detection
-      during recording and for continuous guidance during a substitute run, including when the
-      screen is locked.</li>
+      <li><strong>Location (foreground and background)</strong> — required to enter and use
+      the app. Location permission is requested at the time of licence key activation and must
+      be granted before the app can be used. It is used for stop detection during route
+      recording, for continuous guidance during a substitute run, and to record the device's
+      position at the moment of licence activation. Background location permission allows GPS
+      to remain active when the screen is locked during a substitute run.</li>
     </ul>
   </section>
 
