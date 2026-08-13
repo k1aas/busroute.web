@@ -40,10 +40,11 @@
   footer {
     max-width: 680px; margin: 0 auto; padding: 24px 32px;
     border-top: 1px solid rgba(255,255,255,0.06);
-    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 12px; text-align: center;
   }
-  footer p { color: #3a4a5a; font-size: 0.8rem; margin-right: auto; font-family: sans-serif; }
-  footer a { color: #6a8a9a; font-size: 0.8rem; text-decoration: none; font-family: sans-serif; }
+  footer p { color: #8a9aaa; font-size: 0.75rem; margin-right: 0; font-family: sans-serif; }
+  footer a { color: #8a9aaa; font-size: 0.75rem; text-decoration: none; font-family: sans-serif; }
   footer a:hover { color: var(--amber); }
 </style>
 </head>
@@ -107,7 +108,20 @@
   </section>
 
   <section>
-    <h3>7. Governing law</h3>
+    <h3>7. How we handle updates to these terms</h3>
+    <p>When the terms of service change in a way that affects your rights or the data the app
+    collects, we do not simply present the full legal text again and ask you to scroll to the
+    bottom. Instead, the app shows a plain-language summary of <strong>specifically what
+    changed</strong> — and only that summary must be read before you can continue using the app.
+    The full terms remain accessible for anyone who wants to read them, but we do not treat
+    re-reading unchanged text as meaningful consent.</p>
+    <p>This means that when you accept an updated version of these terms in the app, you have
+    genuinely been shown what is new, in plain language, as a condition of that acceptance.</p>
+    <p>The version of the terms you most recently accepted is recorded on your device.</p>
+  </section>
+
+  <section>
+    <h3>8. Governing law</h3>
     <p>This agreement is governed by the laws of the Province of Ontario, Canada.</p>
   </section>
 
@@ -118,9 +132,12 @@
 </main>
 
 <footer>
-  <p>© 2026 BusRoute</p>
-  <a href="index.html">Home</a>
-  <a href="privacy.html">Privacy policy</a>
+  <p style="color:#8a9aaa;font-size:0.75rem;text-align:center;margin-bottom:8px;">© 2026 BusRoute. All rights reserved.</p>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;">
+    <a href="index.html">Home</a>
+    <a href="privacy.html">Privacy policy</a>
+    <a href="mailto:klaas@busroute.app">Contact</a>
+  </div>
 </footer>
 
 </body>
