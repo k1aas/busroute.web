@@ -128,6 +128,7 @@
     <div class="tab active" onclick="showTab('overview')">Overview</div>
     <div class="tab" onclick="showTab('companies')">Companies</div>
     <div class="tab" onclick="showTab('keys')">License Keys</div>
+    <div class="tab" onclick="showTab('trial')">🍎 Trial Keys</div>
     <div class="tab" onclick="showTab('activations')">Activations</div>
   </nav>
 
@@ -185,6 +186,63 @@
         <div class="card-title">All license keys</div>
         <table id="keys-table">
           <thead><tr><th>Key</th><th>Company</th><th>Max devices</th><th>Active</th><th>Expires</th><th>Notes</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRIAL KEYS -->
+    <div id="tab-trial" class="tab-panel">
+      <!-- Status strip showing current trial keys at a glance -->
+      <div id="trial-status-row" class="stats-row" style="margin-bottom:16px"></div>
+
+      <!-- Generate new trial key -->
+      <div class="card">
+        <div class="card-title">Generate App Store trial key</div>
+        <p style="color:var(--mid);font-size:13px;margin-bottom:14px">
+          Trial keys are generated under the <strong style="color:var(--text)">App Store Trial</strong> company.
+          Generate a new one each month so there is always an overlapping valid key.
+          Put the current key in the App Store description — no interaction needed for downloads.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Duration (days)</label>
+            <input id="trial-days" type="number" value="90" min="7" max="365" style="min-width:100px"/>
+          </div>
+          <div class="form-group">
+            <label>Device cap</label>
+            <input id="trial-max" type="number" value="50" min="1" max="500" style="min-width:100px"/>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <input id="trial-notes" type="text" value="App Store trial" style="min-width:200px"/>
+          </div>
+          <button class="btn-green" style="margin-bottom:0;width:auto" onclick="createTrialKey()">
+            Generate trial key
+          </button>
+        </div>
+        <div id="trial-msg"></div>
+        <div id="trial-server-note" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(240,165,0,.12);border:1px solid var(--amber);border-radius:6px;font-size:12px;color:var(--amber)">
+          ⚠️ The server returned a different expiry than requested. The server may not yet support
+          custom expiry dates — the key will use the server's default (usually 1 year).
+          A small server-side change is needed to honour custom expiry.
+        </div>
+      </div>
+
+      <!-- All trial keys -->
+      <div class="card">
+        <div class="card-title">All trial keys</div>
+        <table id="trial-keys-table">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Status</th>
+              <th>Days left</th>
+              <th>Activations</th>
+              <th>Expires</th>
+              <th>App Store description line</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
@@ -265,6 +323,7 @@ async function loadAll() {
   renderActivations();
   renderStats();
   renderMap();
+  renderTrialKeys();
 }
 
 // ── Stats ─────────────────────────────────────────────────────────
@@ -427,6 +486,143 @@ async function toggleBlock(deviceHash, action) {
   const data = await r.json();
   if (r.ok) { await loadAll(); }
   else { alert("Error: " + (data.error || "Unknown")); }
+}
+
+// ── Trial Keys ────────────────────────────────────────────────────
+const TRIAL_COMPANY_NAME = "App Store Trial";
+
+function getTrialCompanyId() {
+  const co = companiesData.find(c => c.name === TRIAL_COMPANY_NAME);
+  return co ? co.id : null;
+}
+
+function getTrialKeys() {
+  const co = companiesData.find(c => c.name === TRIAL_COMPANY_NAME);
+  if (!co) return [];
+  return keysData.filter(k => k.company === TRIAL_COMPANY_NAME);
+}
+
+function renderTrialKeys() {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayMs = Date.now();
+  const trialKeys = getTrialKeys();
+  const counts = {};
+  activationData.filter(a => a.status === "active").forEach(a => {
+    counts[a.license_key] = (counts[a.license_key] || 0) + 1;
+  });
+
+  // Status strip at the top
+  const strip = document.getElementById("trial-status-row");
+  if (trialKeys.length === 0) {
+    strip.innerHTML = '<div class="stat-card" style="flex:1"><div class="num" style="font-size:18px;color:var(--mid)">No trial keys yet</div><div class="lbl">Generate your first one below</div></div>';
+  } else {
+    strip.innerHTML = trialKeys.map(k => {
+      const active = counts[k.key] || 0;
+      const expMs = new Date(k.expires_on).getTime();
+      const daysLeft = Math.ceil((expMs - todayMs) / 86400000);
+      const pct = Math.round(active / k.max_devices * 100);
+      const expired = daysLeft <= 0;
+      const expiring = daysLeft > 0 && daysLeft <= 30;
+      const full = active >= k.max_devices;
+      const color = expired || full ? "var(--red)" : expiring ? "var(--amber)" : "var(--green)";
+      const statusText = expired ? "Expired" : full ? "Full" : expiring ? `${daysLeft}d left ⚠️` : `${daysLeft}d left`;
+      return `<div class="stat-card" style="min-width:200px;border-color:${color}">
+        <div class="num" style="color:${color};font-size:20px;font-family:var(--mono)">${k.key}</div>
+        <div class="lbl" style="margin-top:6px">${statusText} · ${active}/${k.max_devices} devices (${pct}%)</div>
+      </div>`;
+    }).join("");
+  }
+
+  // Table
+  const tbody = document.querySelector("#trial-keys-table tbody");
+  if (trialKeys.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--mid);text-align:center;padding:24px">No trial keys — generate one above</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = trialKeys.map(k => {
+    const active = counts[k.key] || 0;
+    const expMs = new Date(k.expires_on).getTime();
+    const daysLeft = Math.ceil((expMs - todayMs) / 86400000);
+    const expired = daysLeft <= 0;
+    const expiring = daysLeft > 0 && daysLeft <= 30;
+    const full = active >= k.max_devices;
+    const badge = expired ? '<span class="badge badge-err">Expired</span>'
+                : full    ? '<span class="badge badge-err">Full</span>'
+                : expiring ? '<span class="badge badge-warn">Expiring soon</span>'
+                :             '<span class="badge badge-ok">Active</span>';
+    const appStoreText = `Try BusRoute free — 90-day trial: enter key ${k.key} when the app opens. Android & iPhone. No sign-up needed. busroute.app`;
+    const escapedText = appStoreText.replace(/'/g, "\\'");
+    return `<tr>
+      <td><span class="mono">${k.key}</span></td>
+      <td>${badge}</td>
+      <td style="color:${expired ? "var(--red)" : expiring ? "var(--amber)" : "var(--green)"}">${expired ? "Expired" : daysLeft + " days"}</td>
+      <td>${active} / ${k.max_devices}</td>
+      <td style="color:var(--mid)">${k.expires_on}</td>
+      <td>
+        <button class="btn-sm" onclick="copyTrialText('${escapedText}')" title="${appStoreText}">
+          Copy App Store line
+        </button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function copyTrialText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showMsg("trial-msg", "✓ Copied to clipboard — paste into your App Store description.", true);
+    setTimeout(() => { document.getElementById("trial-msg").textContent = ""; }, 4000);
+  });
+}
+
+async function createTrialKey() {
+  // Ensure the App Store Trial company exists
+  let companyId = getTrialCompanyId();
+  if (!companyId) {
+    showMsg("trial-msg", "Creating 'App Store Trial' company...", true);
+    const r = await apiFetch("/api/admin/companies", {
+      method: "POST",
+      body: JSON.stringify({ name: TRIAL_COMPANY_NAME, prefix: "AT" })
+    });
+    const data = await r.json();
+    if (!r.ok) { showMsg("trial-msg", "Could not create trial company: " + (data.error || "Error"), false); return; }
+    await loadAll();
+    companyId = getTrialCompanyId();
+    if (!companyId) { showMsg("trial-msg", "Trial company not found after creation.", false); return; }
+  }
+
+  const days = parseInt(document.getElementById("trial-days").value) || 90;
+  const maxDevices = parseInt(document.getElementById("trial-max").value) || 50;
+  const notes = document.getElementById("trial-notes").value.trim() || "App Store trial";
+
+  // Compute expires_on (today + days)
+  const expiresDate = new Date();
+  expiresDate.setDate(expiresDate.getDate() + days);
+  const expiresOn = expiresDate.toISOString().slice(0, 10);
+
+  showMsg("trial-msg", "Generating key...", true);
+  const r = await apiFetch("/api/admin/keys", {
+    method: "POST",
+    body: JSON.stringify({ company_id: companyId, max_devices: maxDevices, notes, expires_on: expiresOn })
+  });
+  const data = await r.json();
+  if (!r.ok) { showMsg("trial-msg", data.error || "Error generating key.", false); return; }
+
+  // Check whether the server honoured the custom expiry
+  const serverExpiry = data.expires_on;
+  const expiryMatch = serverExpiry === expiresOn;
+  if (!expiryMatch) {
+    document.getElementById("trial-server-note").style.display = "block";
+    document.getElementById("trial-server-note").innerHTML =
+      `⚠️ Requested expiry <strong>${expiresOn}</strong> but server set <strong>${serverExpiry}</strong>. ` +
+      `The server does not yet support custom expiry dates — a server-side change is needed to add this. ` +
+      `The key is otherwise valid.`;
+  } else {
+    document.getElementById("trial-server-note").style.display = "none";
+  }
+
+  showMsg("trial-msg", `✓ Trial key created: ${data.key}  ·  Expires: ${data.expires_on}  ·  Devices: ${data.max_devices}`, true);
+  await loadAll();
 }
 
 function copyUrl(url) {
