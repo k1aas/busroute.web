@@ -576,53 +576,86 @@ function copyTrialText(text) {
 }
 
 async function createTrialKey() {
-  // Ensure the App Store Trial company exists
+  const noteEl = document.getElementById("trial-server-note");
+  noteEl.style.display = "none";
+
+  // Step 1: ensure the App Store Trial company exists
   let companyId = getTrialCompanyId();
   if (!companyId) {
-    showMsg("trial-msg", "Creating 'App Store Trial' company...", true);
-    const r = await apiFetch("/api/admin/companies", {
-      method: "POST",
-      body: JSON.stringify({ name: TRIAL_COMPANY_NAME, prefix: "AT" })
-    });
-    const data = await r.json();
-    if (!r.ok) { showMsg("trial-msg", "Could not create trial company: " + (data.error || "Error"), false); return; }
+    showMsg("trial-msg", "Creating App Store Trial company…", true);
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 12000);
+      const r = await fetch(API_BASE + "/api/admin/companies", {
+        method: "POST",
+        headers: { "X-Admin-Secret": adminSecret, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: TRIAL_COMPANY_NAME, prefix: "TR" }),
+        signal: ctrl.signal
+      });
+      clearTimeout(t);
+      const data = await r.json();
+      if (!r.ok) {
+        const errText = (data.error || "").toLowerCase();
+        // Duplicate prefix is recoverable — reload and check
+        if (!errText.includes("duplicate") && !errText.includes("exist") && !errText.includes("unique")) {
+          showMsg("trial-msg", "Could not create trial company: " + (data.error || "HTTP " + r.status), false);
+          return;
+        }
+        showMsg("trial-msg", "Company may already exist — reloading…", true);
+      }
+    } catch(e) {
+      const msg = e.name === "AbortError" ? "Timed out creating company — reloading to check…" : "Network error: " + e.message;
+      showMsg("trial-msg", msg, false);
+      // fall through to reload — company may have been created before the timeout
+    }
     await loadAll();
     companyId = getTrialCompanyId();
-    if (!companyId) { showMsg("trial-msg", "Trial company not found after creation.", false); return; }
+    if (!companyId) {
+      showMsg("trial-msg",
+        "Could not find 'App Store Trial' company. Check the Companies tab — " +
+        "it may exist under a different name, or the prefix 'TR' may already be in use.", false);
+      return;
+    }
   }
 
+  // Step 2: generate the trial key
   const days = parseInt(document.getElementById("trial-days").value) || 90;
   const maxDevices = parseInt(document.getElementById("trial-max").value) || 50;
   const notes = document.getElementById("trial-notes").value.trim() || "App Store trial";
-
-  // Compute expires_on (today + days)
   const expiresDate = new Date();
   expiresDate.setDate(expiresDate.getDate() + days);
   const expiresOn = expiresDate.toISOString().slice(0, 10);
 
-  showMsg("trial-msg", "Generating key...", true);
-  const r = await apiFetch("/api/admin/keys", {
-    method: "POST",
-    body: JSON.stringify({ company_id: companyId, max_devices: maxDevices, notes, expires_on: expiresOn })
-  });
-  const data = await r.json();
-  if (!r.ok) { showMsg("trial-msg", data.error || "Error generating key.", false); return; }
-
-  // Check whether the server honoured the custom expiry
-  const serverExpiry = data.expires_on;
-  const expiryMatch = serverExpiry === expiresOn;
-  if (!expiryMatch) {
-    document.getElementById("trial-server-note").style.display = "block";
-    document.getElementById("trial-server-note").innerHTML =
-      `⚠️ Requested expiry <strong>${expiresOn}</strong> but server set <strong>${serverExpiry}</strong>. ` +
-      `The server does not yet support custom expiry dates — a server-side change is needed to add this. ` +
-      `The key is otherwise valid.`;
-  } else {
-    document.getElementById("trial-server-note").style.display = "none";
+  showMsg("trial-msg", "Generating key…", true);
+  try {
+    const ctrl2 = new AbortController();
+    const t2 = setTimeout(() => ctrl2.abort(), 12000);
+    const r2 = await fetch(API_BASE + "/api/admin/keys", {
+      method: "POST",
+      headers: { "X-Admin-Secret": adminSecret, "Content-Type": "application/json" },
+      body: JSON.stringify({ company_id: companyId, max_devices: maxDevices, notes, expires_on: expiresOn }),
+      signal: ctrl2.signal
+    });
+    clearTimeout(t2);
+    const data2 = await r2.json();
+    if (!r2.ok) {
+      showMsg("trial-msg", "Error generating key: " + (data2.error || "HTTP " + r2.status), false);
+      return;
+    }
+    if (data2.expires_on !== expiresOn) {
+      noteEl.style.display = "block";
+      noteEl.innerHTML = "⚠️ Requested expiry <strong>" + expiresOn + "</strong> but server set <strong>" +
+        data2.expires_on + "</strong>. The server does not yet accept a custom expiry date — " +
+        "a small server-side change is needed. The key is otherwise valid.";
+    }
+    showMsg("trial-msg", "✓ Key created: " + data2.key + "  ·  Expires: " + data2.expires_on + "  ·  Devices: " + data2.max_devices, true);
+    await loadAll();
+  } catch(e) {
+    showMsg("trial-msg",
+      e.name === "AbortError"
+        ? "Timed out — reload the page and check the Trial Keys table before trying again."
+        : "Network error: " + e.message, false);
   }
-
-  showMsg("trial-msg", `✓ Trial key created: ${data.key}  ·  Expires: ${data.expires_on}  ·  Devices: ${data.max_devices}`, true);
-  await loadAll();
 }
 
 function copyUrl(url) {
