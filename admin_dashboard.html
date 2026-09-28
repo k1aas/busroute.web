@@ -1086,7 +1086,7 @@ function buildStopDetail(s) {
   if (s.osrm_guidance) parts.push(`<div class="det-section"><div class="det-label">OSRM guidance</div><div class="det-muted">${s.osrm_guidance}</div></div>`);
 
   // Waypoints
-  const wpCount = Array.isArray(s.waypoints) ? s.waypoints.length : null;
+  const wpCount = Array.isArray(s.waypoints_from_prev) ? s.waypoints_from_prev.length : null;
   if (wpCount !== null) parts.push(`<div class="det-section"><div class="det-label">GPS trace</div><div class="det-muted">${wpCount} waypoint${wpCount!==1?"s":""}</div></div>`);
 
   return parts.length ? parts.join("") : '<div class="det-muted">No additional segment data.</div>';
@@ -1187,7 +1187,7 @@ function renderRouteMap(rf) {
 
   d.stops.forEach((s, i) => {
     // Waypoint polyline — normalise coords, fall back to straight line between stops
-    const rawWp = Array.isArray(s.waypoints) ? s.waypoints.map(wpLL).filter(Boolean) : [];
+    const rawWp = Array.isArray(s.waypoints_from_prev) ? s.waypoints_from_prev.map(wpLL).filter(Boolean) : [];
     let pts = rawWp.length >= 2 ? rawWp : null;
 
     // If no usable waypoints: draw a straight line from previous stop
