@@ -53,7 +53,7 @@
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--green); border-color: var(--green); }
 
-  .content { padding: 24px; max-width: 1200px; }
+  .content { padding: 24px; max-width: 1400px; }
 
   /* ── Cards ── */
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
@@ -84,7 +84,7 @@
   }
   .form-group select { appearance: none; }
 
-  /* ── Map ── */
+  /* ── Maps ── */
   #activation-map { height: 400px; border-radius: 8px; border: 1px solid var(--border); margin-top: 16px; }
   .leaflet-tile { filter: brightness(.7) saturate(.8); }
 
@@ -101,6 +101,104 @@
   /* ── Tabs content ── */
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
+
+  /* ── Route Files tab ── */
+  #route-dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--mid);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    user-select: none;
+  }
+  #route-dropzone.drag-over {
+    border-color: var(--green);
+    background: rgba(46,204,113,.05);
+    color: var(--text);
+  }
+  #route-dropzone svg { display: block; margin: 0 auto 10px; }
+
+  .route-file-row { cursor: pointer; }
+  .route-file-row.selected td { background: rgba(46,204,113,.06); }
+
+  /* Route viewer */
+  #route-viewer { margin-bottom: 20px; }
+  .route-viewer-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .route-viewer-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+  }
+  .route-viewer-title { font-weight: 700; font-size: 15px; }
+  .route-type-warning {
+    padding: 10px 20px;
+    font-size: 13px;
+    border-bottom: 1px solid;
+  }
+  .route-viewer-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr 280px;
+    height: 560px;
+  }
+  #route-meta-panel {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+  }
+  #route-map-container { position: relative; }
+  #route-map { height: 100%; width: 100%; }
+  #route-stops-panel {
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .panel-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--mid);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+  .meta-row { margin-bottom: 12px; }
+  .meta-label { font-size: 10px; color: var(--mid); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+  .meta-value { font-size: 13px; color: var(--text); }
+  .run-date { font-size: 11px; color: var(--mid); font-family: var(--mono); line-height: 1.8; }
+  .stops-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--mid);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    position: sticky;
+    top: 0;
+    background: var(--card);
+    z-index: 1;
+  }
+  .stop-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .1s;
+  }
+  .stop-item:last-child { border-bottom: none; }
+  .stop-item:hover { background: rgba(255,255,255,.03); }
+  .stop-item.active { background: rgba(46,204,113,.07); border-left: 3px solid var(--green); }
+  .stop-header-row { display: flex; align-items: baseline; gap: 8px; }
+  .stop-num { font-size: 10px; font-weight: 700; color: var(--mid); font-family: var(--mono); }
+  .stop-time { font-size: 13px; font-weight: 600; color: var(--text); }
+  .stop-handoff { font-size: 10px; color: var(--amber); margin-left: auto; }
+  .stop-meta { font-size: 11px; color: var(--mid); margin-top: 2px; }
+  .stop-warn { font-size: 10px; color: var(--amber); margin-top: 2px; }
+  .stop-note { font-size: 11px; color: var(--text); margin-top: 3px; font-style: italic; opacity: .85; }
+  .stop-note-guided { font-size: 11px; color: var(--amber); margin-top: 3px; }
 </style>
 </head>
 <body>
@@ -125,11 +223,12 @@
     <button class="btn-sm" onclick="logout()">Sign out</button>
   </div>
   <nav>
-    <div class="tab active" onclick="showTab('overview')">Overview</div>
-    <div class="tab" onclick="showTab('companies')">Companies</div>
-    <div class="tab" onclick="showTab('keys')">License Keys</div>
-    <div class="tab" onclick="showTab('trial')">🍎 Trial Keys</div>
-    <div class="tab" onclick="showTab('activations')">Activations</div>
+    <div class="tab active" onclick="showTab('overview', this)">Overview</div>
+    <div class="tab" onclick="showTab('companies', this)">Companies</div>
+    <div class="tab" onclick="showTab('keys', this)">License Keys</div>
+    <div class="tab" onclick="showTab('trial', this)">🍎 Trial Keys</div>
+    <div class="tab" onclick="showTab('activations', this)">Activations</div>
+    <div class="tab" onclick="showTab('routefiles', this)">📂 Route Files</div>
   </nav>
 
   <div class="content">
@@ -193,10 +292,7 @@
 
     <!-- TRIAL KEYS -->
     <div id="tab-trial" class="tab-panel">
-      <!-- Status strip showing current trial keys at a glance -->
       <div id="trial-status-row" class="stats-row" style="margin-bottom:16px"></div>
-
-      <!-- Generate new trial key -->
       <div class="card">
         <div class="card-title">Generate App Store trial key</div>
         <p style="color:var(--mid);font-size:13px;margin-bottom:14px">
@@ -228,8 +324,6 @@
           A small server-side change is needed to honour custom expiry.
         </div>
       </div>
-
-      <!-- All trial keys -->
       <div class="card">
         <div class="card-title">All trial keys</div>
         <table id="trial-keys-table">
@@ -259,6 +353,83 @@
       </div>
     </div>
 
+    <!-- ROUTE FILES -->
+    <div id="tab-routefiles" class="tab-panel">
+
+      <!-- Drop zone -->
+      <div class="card">
+        <div class="card-title">Load route files</div>
+        <p style="color:var(--mid);font-size:13px;margin-bottom:16px">
+          Drop computed route files (<code style="color:var(--text);font-family:var(--mono);font-size:12px">BR_computed_*.json</code>) here to inspect them.
+          Backup files (<code style="color:var(--amber);font-family:var(--mono);font-size:12px">BR_backup_*_raw*.json</code> / <code style="color:var(--amber);font-family:var(--mono);font-size:12px">*_trim*.json</code>)
+          are accepted with a warning. Files are processed locally — nothing is uploaded.
+        </p>
+        <div id="route-dropzone">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p style="font-size:15px;font-weight:600;margin-bottom:4px">Drop JSON route files here</p>
+          <p style="font-size:12px;margin-bottom:12px">or</p>
+          <button class="btn-sm" onclick="document.getElementById('route-file-input').click();event.stopPropagation()">Browse files</button>
+          <input type="file" id="route-file-input" accept=".json" multiple style="display:none" onchange="handleFileInput(this.files)">
+        </div>
+      </div>
+
+      <!-- File table -->
+      <div class="card" id="route-files-card" style="display:none">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;padding-bottom:14px">
+          <span>Loaded files — click a row to view route</span>
+          <button class="btn-sm btn-red" onclick="clearRouteFiles()">Clear all</button>
+        </div>
+        <table id="route-files-table">
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Route</th>
+              <th>Type</th>
+              <th>Submitted</th>
+              <th>Valid until</th>
+              <th>Stops</th>
+              <th>Runs</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="route-files-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Route viewer -->
+      <div id="route-viewer" style="display:none">
+        <div class="route-viewer-card">
+          <!-- Warning banner -->
+          <div id="route-type-warning" style="display:none" class="route-type-warning"></div>
+          <!-- Header -->
+          <div class="route-viewer-header">
+            <span id="viewer-title" class="route-viewer-title"></span>
+            <span id="viewer-badge"></span>
+            <span style="flex:1"></span>
+            <button class="btn-sm" onclick="closeRouteViewer()">✕ Close</button>
+          </div>
+          <!-- 3-panel layout -->
+          <div class="route-viewer-layout">
+            <!-- Left: meta -->
+            <div id="route-meta-panel">
+              <div class="panel-section-title" style="margin-bottom:12px">Route info</div>
+              <div id="route-meta-content"></div>
+            </div>
+            <!-- Center: map -->
+            <div id="route-map-container">
+              <div id="route-map"></div>
+            </div>
+            <!-- Right: stops -->
+            <div id="route-stops-panel">
+              <div class="stops-header">Stops <span id="stop-count-badge" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+              <div id="route-stops-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-routefiles -->
+
   </div><!-- /content -->
 </div><!-- /app -->
 
@@ -274,7 +445,7 @@ let keysData = [];
 async function login() {
   const s = document.getElementById("secret-input").value.trim().replace(/[\r\n]/g, '');
   if (!s) return;
-  adminSecret = s; // set before the test call so apiFetch sends it
+  adminSecret = s;
   try {
     const r = await apiFetch("/api/admin/companies");
     if (!r.ok) { adminSecret = ""; document.getElementById("login-error").textContent = "Invalid secret."; return; }
@@ -282,6 +453,7 @@ async function login() {
     document.getElementById("app").style.display = "block";
     document.getElementById("api-host").textContent = API_BASE;
     initMap();
+    initRouteDropzone();
     loadAll();
   } catch(e) {
     document.getElementById("login-error").textContent = "Cannot reach server: " + e.message;
@@ -301,11 +473,15 @@ function apiFetch(path, opts={}) {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────
-function showTab(name) {
+function showTab(name, tabEl) {
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + name).classList.add("active");
-  event.target.classList.add("active");
+  if (tabEl) tabEl.classList.add("active");
+  // Invalidate route map when switching to it
+  if (name === "routefiles" && routeMap) {
+    setTimeout(() => routeMap.invalidateSize(), 100);
+  }
 }
 
 // ── Load all data ─────────────────────────────────────────────────
@@ -336,7 +512,7 @@ function renderStats() {
   document.getElementById("stat-overlimit").textContent = over;
 }
 
-// ── Map ───────────────────────────────────────────────────────────
+// ── Activation Map ────────────────────────────────────────────────
 function initMap() {
   map = L.map("activation-map").setView([44, -79], 5);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -346,7 +522,6 @@ function initMap() {
 
 function renderMap() {
   if (!map) return;
-  // Clear existing markers
   map.eachLayer(l => { if (l instanceof L.CircleMarker) map.removeLayer(l); });
 
   const byKey = {};
@@ -381,7 +556,6 @@ function renderCompanies() {
           <button class="btn-sm" style="margin-left:8px" onclick="copyUrl('${API_BASE}/api/dashboard/${c.dashboard_token}')">Copy</button></td>
     </tr>`).join("");
 
-  // Populate company select in key form
   const sel = document.getElementById("key-company-select");
   sel.innerHTML = '<option value="">Select…</option>' + companiesData.map(c =>
     `<option value="${c.id}">${c.name} (${c.prefix})</option>`).join("");
@@ -403,7 +577,6 @@ async function createCompany() {
 
 // ── Keys ──────────────────────────────────────────────────────────
 function renderKeys() {
-  // Count active activations per key
   const counts = {};
   activationData.filter(a=>a.status==="active").forEach(a => {
     counts[a.license_key] = (counts[a.license_key]||0) + 1;
@@ -497,8 +670,6 @@ function getTrialCompanyId() {
 }
 
 function getTrialKeys() {
-  const co = companiesData.find(c => c.name === TRIAL_COMPANY_NAME);
-  if (!co) return [];
   return keysData.filter(k => k.company === TRIAL_COMPANY_NAME);
 }
 
@@ -511,7 +682,6 @@ function renderTrialKeys() {
     counts[a.license_key] = (counts[a.license_key] || 0) + 1;
   });
 
-  // Status strip at the top
   const strip = document.getElementById("trial-status-row");
   if (trialKeys.length === 0) {
     strip.innerHTML = '<div class="stat-card" style="flex:1"><div class="num" style="font-size:18px;color:var(--mid)">No trial keys yet</div><div class="lbl">Generate your first one below</div></div>';
@@ -533,7 +703,6 @@ function renderTrialKeys() {
     }).join("");
   }
 
-  // Table
   const tbody = document.querySelector("#trial-keys-table tbody");
   if (trialKeys.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="color:var(--mid);text-align:center;padding:24px">No trial keys — generate one above</td></tr>';
@@ -579,7 +748,6 @@ async function createTrialKey() {
   const noteEl = document.getElementById("trial-server-note");
   noteEl.style.display = "none";
 
-  // Step 1: ensure the App Store Trial company exists
   let companyId = getTrialCompanyId();
   if (!companyId) {
     showMsg("trial-msg", "Creating App Store Trial company…", true);
@@ -596,7 +764,6 @@ async function createTrialKey() {
       const data = await r.json();
       if (!r.ok) {
         const errText = (data.error || "").toLowerCase();
-        // Duplicate prefix is recoverable — reload and check
         if (!errText.includes("duplicate") && !errText.includes("exist") && !errText.includes("unique")) {
           showMsg("trial-msg", "Could not create trial company: " + (data.error || "HTTP " + r.status), false);
           return;
@@ -606,7 +773,6 @@ async function createTrialKey() {
     } catch(e) {
       const msg = e.name === "AbortError" ? "Timed out creating company — reloading to check…" : "Network error: " + e.message;
       showMsg("trial-msg", msg, false);
-      // fall through to reload — company may have been created before the timeout
     }
     await loadAll();
     companyId = getTrialCompanyId();
@@ -618,7 +784,6 @@ async function createTrialKey() {
     }
   }
 
-  // Step 2: generate the trial key
   const days = parseInt(document.getElementById("trial-days").value) || 90;
   const maxDevices = parseInt(document.getElementById("trial-max").value) || 50;
   const notes = document.getElementById("trial-notes").value.trim() || "App Store trial";
@@ -660,6 +825,392 @@ async function createTrialKey() {
 
 function copyUrl(url) {
   navigator.clipboard.writeText(url);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ROUTE FILES TAB
+// ═══════════════════════════════════════════════════════════════════
+
+let routeFiles = [];          // array of { filename, data, type, expired, badge }
+let routeMap = null;
+let selectedRouteIdx = -1;
+let routeMarkers = [];
+let routePolylines = [];
+
+// ── Classify a loaded JSON file ───────────────────────────────────
+function classifyRouteFile(data) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (data.schema === "busroute-v1" && Array.isArray(data.stops)) {
+    const expired = data.valid_until && data.valid_until < today;
+    return {
+      type: "computed",
+      expired: !!expired,
+      badge: expired
+        ? '<span class="badge badge-err">Expired</span>'
+        : '<span class="badge badge-ok">Computed ✓</span>'
+    };
+  }
+
+  if (Array.isArray(data.runs)) {
+    const hasRaw = data.runs.some(r => r.status === "raw");
+    if (hasRaw) return {
+      type: "raw",
+      expired: false,
+      badge: '<span class="badge badge-err">⚠ Raw backup</span>'
+    };
+    return {
+      type: "trim",
+      expired: false,
+      badge: '<span class="badge badge-warn">⚠ Trim backup</span>'
+    };
+  }
+
+  return { type: "unknown", expired: false, badge: '<span class="badge badge-blk">Unknown</span>' };
+}
+
+// ── Load files from input or drop ─────────────────────────────────
+async function handleFileInput(files) {
+  let added = 0;
+  for (const f of Array.from(files)) {
+    if (routeFiles.find(r => r.filename === f.name)) continue; // skip duplicate
+    try {
+      const text = await f.text();
+      const data = JSON.parse(text);
+      const cls = classifyRouteFile(data);
+      routeFiles.push({ filename: f.name, data, ...cls });
+      added++;
+    } catch(e) {
+      console.warn("Failed to parse route file:", f.name, e);
+    }
+  }
+  if (added > 0) renderRouteFilesTable();
+  // Reset the file input so the same file can be re-selected
+  document.getElementById("route-file-input").value = "";
+}
+
+// ── Render the files table ────────────────────────────────────────
+function renderRouteFilesTable() {
+  const card = document.getElementById("route-files-card");
+  const tbody = document.getElementById("route-files-tbody");
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (routeFiles.length === 0) { card.style.display = "none"; return; }
+  card.style.display = "block";
+
+  tbody.innerHTML = routeFiles.map((rf, i) => {
+    const d = rf.data;
+    const isC = rf.type === "computed";
+    const routeNum   = isC ? (d.route_number || "—") : "—";
+    const runType    = isC ? (d.run_type || "—").toUpperCase() : (Array.isArray(d.runs) ? "backup" : "—");
+    const submitted  = isC && d.exported_at ? d.exported_at.slice(0, 10) : "—";
+    const validUntil = isC ? (d.valid_until || "—") : "—";
+    const stops      = isC ? (d.stops?.length ?? "—") : "—";
+    const runs       = isC ? (d.observed_runs ?? "—") : (Array.isArray(d.runs) ? d.runs.length : "—");
+    const expiredCls = isC && d.valid_until && d.valid_until < today ? 'style="color:var(--red)"' : '';
+    const selCls     = selectedRouteIdx === i ? " selected" : "";
+
+    return `<tr class="route-file-row${selCls}" onclick="selectRouteFile(${i})">
+      <td style="font-size:12px;color:var(--mid);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${rf.filename}">${rf.filename}</td>
+      <td><span class="mono">${routeNum}</span></td>
+      <td style="color:var(--mid);font-size:12px">${runType}</td>
+      <td style="color:var(--mid);font-size:12px">${submitted}</td>
+      <td ${expiredCls} style="font-size:12px">${validUntil}</td>
+      <td style="font-size:12px">${stops}</td>
+      <td style="font-size:12px">${runs}</td>
+      <td>${rf.badge}</td>
+    </tr>`;
+  }).join("");
+}
+
+function clearRouteFiles() {
+  routeFiles = [];
+  selectedRouteIdx = -1;
+  document.getElementById("route-files-card").style.display = "none";
+  document.getElementById("route-viewer").style.display = "none";
+}
+
+// ── Select a file → open viewer ───────────────────────────────────
+function selectRouteFile(idx) {
+  selectedRouteIdx = idx;
+  renderRouteFilesTable();
+  openRouteViewer(routeFiles[idx]);
+}
+
+function closeRouteViewer() {
+  document.getElementById("route-viewer").style.display = "none";
+  selectedRouteIdx = -1;
+  renderRouteFilesTable();
+}
+
+// ── Route viewer ──────────────────────────────────────────────────
+function openRouteViewer(rf) {
+  const viewer = document.getElementById("route-viewer");
+  viewer.style.display = "block";
+  viewer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  // Warning banner
+  const warn = document.getElementById("route-type-warning");
+  if (rf.type === "raw") {
+    warn.style.display = "block";
+    warn.style.cssText = "display:block;padding:10px 20px;font-size:13px;border-bottom:1px solid var(--red);background:rgba(231,76,60,.1);color:var(--red)";
+    warn.textContent = "⚠️  RAW BACKUP — This file has not been processed into a computed route. It cannot be used for navigation guidance.";
+  } else if (rf.type === "trim") {
+    warn.style.cssText = "display:block;padding:10px 20px;font-size:13px;border-bottom:1px solid var(--amber);background:rgba(240,165,0,.1);color:var(--amber)";
+    warn.textContent = "⚠️  TRIMMED BACKUP — These are intermediate GPS runs, not a finished computed route.";
+  } else if (rf.type === "computed" && rf.expired) {
+    warn.style.cssText = "display:block;padding:10px 20px;font-size:13px;border-bottom:1px solid var(--amber);background:rgba(240,165,0,.1);color:var(--amber)";
+    warn.textContent = "⚠️  EXPIRED — The valid_until date on this route has passed. Verify before using.";
+  } else {
+    warn.style.display = "none";
+  }
+
+  // Title + badge
+  const d = rf.data;
+  const titleEl = document.getElementById("viewer-title");
+  if (rf.type === "computed") {
+    titleEl.textContent = `Route ${d.route_number || "?"} — ${(d.run_type || "?").toUpperCase()}`;
+  } else {
+    titleEl.textContent = rf.filename.replace(/\.json$/i, "");
+  }
+  document.getElementById("viewer-badge").innerHTML = rf.badge;
+
+  // Panels
+  renderRouteMeta(rf);
+  renderRouteStops(rf);
+
+  // Map
+  initRouteMap();
+  renderRouteMap(rf);
+}
+
+// ── Meta panel ────────────────────────────────────────────────────
+function renderRouteMeta(rf) {
+  const el = document.getElementById("route-meta-content");
+  const d  = rf.data;
+
+  if (rf.type !== "computed") {
+    const runsArr = Array.isArray(d.runs) ? d.runs : [];
+    const rawCnt  = runsArr.filter(r => r.status === "raw").length;
+    const trimCnt = runsArr.filter(r => r.status === "trimmed").length;
+    el.innerHTML = `
+      <div class="meta-row"><div class="meta-label">File type</div><div class="meta-value">${rf.type === "raw" ? "Raw backup" : rf.type === "trim" ? "Trim backup" : "Unknown"}</div></div>
+      <div class="meta-row"><div class="meta-label">Total runs</div><div class="meta-value">${runsArr.length}</div></div>
+      ${rawCnt  ? `<div class="meta-row"><div class="meta-label">Raw runs</div><div class="meta-value" style="color:var(--red)">${rawCnt}</div></div>` : ""}
+      ${trimCnt ? `<div class="meta-row"><div class="meta-label">Trimmed runs</div><div class="meta-value" style="color:var(--amber)">${trimCnt}</div></div>` : ""}
+      <div class="meta-row" style="margin-top:16px"><div class="meta-label" style="color:var(--amber)">Note</div><div class="meta-value" style="font-size:12px;color:var(--mid)">Submit this file through the BusRoute app to generate a computed route.</div></div>
+    `;
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const validColor = d.valid_until && d.valid_until < today ? "var(--red)" : "var(--green)";
+  const runDates = (d.run_dates || []).map(dt =>
+    `<div class="run-date">${dt}</div>`).join("");
+
+  el.innerHTML = `
+    <div class="meta-row">
+      <div class="meta-label">Route number</div>
+      <div class="meta-value" style="font-size:20px;font-weight:800;color:var(--green);font-family:var(--mono)">${d.route_number || "—"}</div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-label">Run type</div>
+      <div class="meta-value" style="font-weight:600">${(d.run_type || "—").toUpperCase()}</div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-label">Submitted</div>
+      <div class="meta-value">${d.exported_at ? d.exported_at.slice(0, 10) : "—"}</div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-label">Exported by</div>
+      <div class="meta-value" style="font-size:12px;word-break:break-all">${d.exported_by || "—"}</div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-label">Valid until</div>
+      <div class="meta-value" style="color:${validColor};font-weight:600">${d.valid_until || "—"}</div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-label">Stops</div>
+      <div class="meta-value">${d.stops?.length ?? "—"}</div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-label">Observed runs</div>
+      <div class="meta-value">${d.observed_runs ?? "—"}</div>
+    </div>
+    ${runDates ? `<div class="meta-row"><div class="meta-label">Run dates</div><div class="meta-value" style="margin-top:2px">${runDates}</div></div>` : ""}
+  `;
+}
+
+// ── Stops panel ───────────────────────────────────────────────────
+function renderRouteStops(rf) {
+  const list  = document.getElementById("route-stops-list");
+  const badge = document.getElementById("stop-count-badge");
+  const d     = rf.data;
+
+  if (rf.type !== "computed" || !Array.isArray(d.stops)) {
+    badge.textContent = "";
+    list.innerHTML = '<div style="padding:16px;color:var(--mid);font-size:13px">Not a computed route — stop data unavailable.</div>';
+    return;
+  }
+
+  badge.textContent = `${d.stops.length}`;
+
+  list.innerHTML = d.stops.map((s, i) => {
+    const provisional = s.confidence === "provisional";
+    const handoff     = s.safe_handoff;
+    const students    = s.avg_students !== undefined
+      ? `${s.avg_students % 1 === 0 ? s.avg_students : s.avg_students.toFixed(1)} avg students`
+      : "";
+    const stype = s.stop_type ? ` · ${s.stop_type}` : "";
+    const note  = s.segment_note || "";
+    const guided = s.guided_dropoff_note || "";
+
+    return `<div class="stop-item" id="stop-item-${i}" onclick="focusStop(${i})">
+      <div class="stop-header-row">
+        <span class="stop-num">#${i + 1}</span>
+        <span class="stop-time">${s.time || "—"}</span>
+        ${handoff ? '<span class="stop-handoff">🔶 handoff</span>' : ""}
+      </div>
+      ${(students || stype) ? `<div class="stop-meta">${students}${stype}</div>` : ""}
+      ${provisional ? '<div class="stop-warn">⚠ provisional confidence</div>' : ""}
+      ${note   ? `<div class="stop-note">${note}</div>` : ""}
+      ${guided ? `<div class="stop-note-guided">↳ ${guided}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+// ── Route map ─────────────────────────────────────────────────────
+function initRouteMap() {
+  if (routeMap) {
+    setTimeout(() => routeMap.invalidateSize(), 80);
+    return;
+  }
+  routeMap = L.map("route-map").setView([43.3, -80.3], 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(routeMap);
+}
+
+function renderRouteMap(rf) {
+  if (!routeMap) return;
+
+  // Clear previous layers
+  routeMarkers.forEach(m => { try { routeMap.removeLayer(m); } catch(e){} });
+  routePolylines.forEach(p => { try { routeMap.removeLayer(p); } catch(e){} });
+  routeMarkers  = [];
+  routePolylines = [];
+
+  const d = rf.data;
+  if (rf.type !== "computed" || !Array.isArray(d.stops) || d.stops.length === 0) {
+    setTimeout(() => routeMap.invalidateSize(), 120);
+    return;
+  }
+
+  const bounds = [];
+
+  d.stops.forEach((s, i) => {
+    // Waypoint polyline (the road segment approaching this stop)
+    if (Array.isArray(s.waypoints) && s.waypoints.length > 1) {
+      const pts = s.waypoints.map(w => [w.lat, w.lng]);
+      const poly = L.polyline(pts, { color: "#2ecc71", weight: 3, opacity: 0.75 }).addTo(routeMap);
+      routePolylines.push(poly);
+      pts.forEach(p => bounds.push(p));
+    }
+
+    // Stop marker
+    const isHandoff = !!s.safe_handoff;
+    const isProvisional = s.confidence === "provisional";
+    const markerColor  = isHandoff ? "#f0a500" : "#2ecc71";
+    const borderColor  = isProvisional ? "#f0a500" : "rgba(0,0,0,.5)";
+    const numLabel     = `${i + 1}`;
+    const fontSize     = numLabel.length > 2 ? "8px" : "10px";
+
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="
+        width:26px;height:26px;border-radius:50%;
+        background:${markerColor};color:#000;
+        display:flex;align-items:center;justify-content:center;
+        font-size:${fontSize};font-weight:800;font-family:system-ui,sans-serif;
+        border:2px solid ${borderColor};
+        box-shadow:0 2px 5px rgba(0,0,0,.6);
+      ">${numLabel}</div>`,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+      popupAnchor: [0, -15]
+    });
+
+    const popupHtml = [
+      `<b>Stop ${i + 1}</b>`,
+      s.time ? `<br>Time: <b>${s.time}</b>` : "",
+      s.avg_students !== undefined ? `<br>Avg students: ${s.avg_students % 1 === 0 ? s.avg_students : s.avg_students.toFixed(1)}` : "",
+      s.stop_type ? `<br>Type: ${s.stop_type}` : "",
+      isProvisional ? `<br><span style="color:#f0a500">⚠ provisional</span>` : "",
+      isHandoff ? `<br><span style="color:#f0a500">🔶 safe handoff point</span>` : "",
+      s.segment_note ? `<br><em>${s.segment_note}</em>` : "",
+      s.guided_dropoff_note ? `<br><span style="color:#f0a500">${s.guided_dropoff_note}</span>` : ""
+    ].join("");
+
+    const marker = L.marker([s.lat, s.lng], { icon })
+      .bindPopup(popupHtml)
+      .on("click", () => highlightStop(i))
+      .addTo(routeMap);
+
+    routeMarkers.push(marker);
+    bounds.push([s.lat, s.lng]);
+  });
+
+  if (bounds.length > 0) {
+    routeMap.fitBounds(bounds, { padding: [32, 32] });
+  }
+
+  setTimeout(() => routeMap.invalidateSize(), 150);
+}
+
+// ── Stop interactions ─────────────────────────────────────────────
+function focusStop(idx) {
+  const rf = routeFiles[selectedRouteIdx];
+  if (!rf || !Array.isArray(rf.data.stops) || !rf.data.stops[idx]) return;
+  const s = rf.data.stops[idx];
+  if (routeMap) {
+    routeMap.setView([s.lat, s.lng], Math.max(routeMap.getZoom(), 15), { animate: true });
+  }
+  if (routeMarkers[idx]) routeMarkers[idx].openPopup();
+  highlightStop(idx);
+}
+
+function highlightStop(idx) {
+  document.querySelectorAll("#route-stops-list .stop-item").forEach(el => el.classList.remove("active"));
+  const el = document.getElementById(`stop-item-${idx}`);
+  if (el) {
+    el.classList.add("active");
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+// ── Drag-and-drop setup ───────────────────────────────────────────
+function initRouteDropzone() {
+  const dz = document.getElementById("route-dropzone");
+  if (!dz) return;
+
+  dz.addEventListener("dragover", e => {
+    e.preventDefault();
+    dz.classList.add("drag-over");
+  });
+  dz.addEventListener("dragleave", e => {
+    if (!dz.contains(e.relatedTarget)) dz.classList.remove("drag-over");
+  });
+  dz.addEventListener("drop", e => {
+    e.preventDefault();
+    dz.classList.remove("drag-over");
+    if (e.dataTransfer.files.length > 0) handleFileInput(e.dataTransfer.files);
+  });
+  // Clicking the zone (not the button inside it) opens the picker
+  dz.addEventListener("click", e => {
+    if (e.target === dz || e.target.tagName === "P" || e.target.tagName === "SVG" || e.target.tagName.toLowerCase() === "polyline" || e.target.tagName.toLowerCase() === "line") {
+      document.getElementById("route-file-input").click();
+    }
+  });
 }
 </script>
 </body>
