@@ -187,18 +187,33 @@
     border-bottom: 1px solid var(--border);
     cursor: pointer;
     transition: background .1s;
+    user-select: none;
   }
   .stop-item:last-child { border-bottom: none; }
   .stop-item:hover { background: rgba(255,255,255,.03); }
-  .stop-item.active { background: rgba(46,204,113,.07); border-left: 3px solid var(--green); }
-  .stop-header-row { display: flex; align-items: baseline; gap: 8px; }
+  .stop-item.expanded { background: rgba(46,204,113,.05); border-left: 3px solid var(--green); padding-left: 11px; }
+  .stop-header-row { display: flex; align-items: center; gap: 8px; }
   .stop-num { font-size: 10px; font-weight: 700; color: var(--mid); font-family: var(--mono); }
   .stop-time { font-size: 13px; font-weight: 600; color: var(--text); }
-  .stop-handoff { font-size: 10px; color: var(--amber); margin-left: auto; }
+  .stop-handoff { font-size: 10px; color: var(--amber); }
+  .stop-chevron { font-size: 9px; color: var(--mid); margin-left: auto; transition: transform .2s; display: inline-block; }
+  .stop-item.expanded .stop-chevron { transform: rotate(90deg); }
   .stop-meta { font-size: 11px; color: var(--mid); margin-top: 2px; }
   .stop-warn { font-size: 10px; color: var(--amber); margin-top: 2px; }
   .stop-note { font-size: 11px; color: var(--text); margin-top: 3px; font-style: italic; opacity: .85; }
   .stop-note-guided { font-size: 11px; color: var(--amber); margin-top: 3px; }
+  /* Segment detail block */
+  .stop-detail { display: none; padding: 10px 0 4px; border-top: 1px solid var(--border); margin-top: 8px; }
+  .stop-item.expanded .stop-detail { display: block; }
+  .det-section { margin-bottom: 10px; }
+  .det-section:last-child { margin-bottom: 0; }
+  .det-label { font-size: 10px; font-weight: 700; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+  .det-row { font-size: 12px; color: var(--text); line-height: 1.6; }
+  .det-note { font-size: 12px; color: var(--text); line-height: 1.5; font-style: italic; margin-bottom: 2px; }
+  .det-guided { font-size: 12px; color: var(--amber); line-height: 1.5; }
+  .det-turn { font-size: 12px; color: var(--text); padding: 1px 0; line-height: 1.5; }
+  .det-turn::before { content: "→ "; color: var(--green); font-weight: 800; }
+  .det-muted { font-size: 11px; color: var(--mid); line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -1041,6 +1056,42 @@ function renderRouteMeta(rf) {
   `;
 }
 
+// ── Bearing label ─────────────────────────────────────────────────
+function bearingLabel(b) {
+  const dirs = ["N","NE","E","SE","S","SW","W","NW"];
+  return dirs[Math.round((+b % 360) / 45) % 8];
+}
+
+// ── Per-stop detail HTML ───────────────────────────────────────────
+function buildStopDetail(s) {
+  const parts = [];
+  // Location + bearing
+  const locParts = [];
+  if (s.lat != null) locParts.push(`${(+s.lat).toFixed(6)}°N, ${Math.abs(+s.lng).toFixed(6)}°W`);
+  if (s.approach_bearing != null) locParts.push(`Approach: ${s.approach_bearing}° ${bearingLabel(s.approach_bearing)}`);
+  if (locParts.length) parts.push(`<div class="det-section"><div class="det-label">Location</div>${locParts.map(l=>`<div class="det-row">${l}</div>`).join("")}</div>`);
+
+  // Segment notes
+  const notes = [s.segment_note, s.segment_note_mid, s.segment_note_end].filter(Boolean);
+  if (notes.length) parts.push(`<div class="det-section"><div class="det-label">Segment notes</div>${notes.map(n=>`<div class="det-note">${n}</div>`).join("")}</div>`);
+
+  // Guided dropoff
+  if (s.guided_dropoff_note) parts.push(`<div class="det-section"><div class="det-label">Guided dropoff</div><div class="det-guided">↳ ${s.guided_dropoff_note}</div></div>`);
+
+  // Turn instructions
+  const turns = Array.isArray(s.turn_instructions) ? s.turn_instructions.filter(Boolean) : [];
+  if (turns.length) parts.push(`<div class="det-section"><div class="det-label">Turn instructions</div>${turns.map(t=>`<div class="det-turn">${t}</div>`).join("")}</div>`);
+
+  // OSRM guidance
+  if (s.osrm_guidance) parts.push(`<div class="det-section"><div class="det-label">OSRM guidance</div><div class="det-muted">${s.osrm_guidance}</div></div>`);
+
+  // Waypoints
+  const wpCount = Array.isArray(s.waypoints) ? s.waypoints.length : null;
+  if (wpCount !== null) parts.push(`<div class="det-section"><div class="det-label">GPS trace</div><div class="det-muted">${wpCount} waypoint${wpCount!==1?"s":""}</div></div>`);
+
+  return parts.length ? parts.join("") : '<div class="det-muted">No additional segment data.</div>';
+}
+
 // ── Stops panel ───────────────────────────────────────────────────
 function renderRouteStops(rf) {
   const list  = document.getElementById("route-stops-list");
@@ -1059,32 +1110,49 @@ function renderRouteStops(rf) {
     const provisional = s.confidence === "provisional";
     const handoff     = s.safe_handoff;
     const students    = s.avg_students !== undefined
-      ? `${s.avg_students % 1 === 0 ? s.avg_students : s.avg_students.toFixed(1)} avg students`
+      ? `${s.avg_students % 1 === 0 ? s.avg_students : s.avg_students.toFixed(1)} avg`
       : "";
     const stype = s.stop_type ? ` · ${s.stop_type}` : "";
-    const note  = s.segment_note || "";
-    const guided = s.guided_dropoff_note || "";
 
-    return `<div class="stop-item" id="stop-item-${i}" onclick="focusStop(${i})">
+    return `<div class="stop-item" id="stop-item-${i}" onclick="toggleStop(${i})">
       <div class="stop-header-row">
         <span class="stop-num">#${i + 1}</span>
         <span class="stop-time">${s.time || "—"}</span>
-        ${handoff ? '<span class="stop-handoff">🔶 handoff</span>' : ""}
+        ${handoff ? '<span class="stop-handoff">🔶</span>' : ""}
+        <span class="stop-chevron">▶</span>
       </div>
       ${(students || stype) ? `<div class="stop-meta">${students}${stype}</div>` : ""}
-      ${provisional ? '<div class="stop-warn">⚠ provisional confidence</div>' : ""}
-      ${note   ? `<div class="stop-note">${note}</div>` : ""}
-      ${guided ? `<div class="stop-note-guided">↳ ${guided}</div>` : ""}
+      ${provisional ? '<div class="stop-warn">⚠ provisional</div>' : ""}
+      <div class="stop-detail">${buildStopDetail(s)}</div>
     </div>`;
   }).join("");
 }
 
-// ── Coordinate normaliser — handles {lat,lng}, {latitude,longitude}, [lat,lng] ──
+// ── Stop toggle (sidebar click) ────────────────────────────────────
+function toggleStop(idx) {
+  const item   = document.getElementById(`stop-item-${idx}`);
+  if (!item) return;
+  const isOpen = item.classList.contains("expanded");
+  document.querySelectorAll("#route-stops-list .stop-item").forEach(el => el.classList.remove("expanded"));
+  if (!isOpen) {
+    item.classList.add("expanded");
+    item.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    // Pan map to this stop
+    const rf = routeFiles[selectedRouteIdx];
+    if (rf?.data?.stops?.[idx]) {
+      const s = rf.data.stops[idx];
+      if (routeMap && s.lat != null) routeMap.setView([+s.lat, +s.lng], Math.max(routeMap.getZoom(), 15), { animate: true });
+      if (routeMarkers[idx]) routeMarkers[idx].openPopup();
+    }
+  }
+}
+
+// ── Coordinate normaliser — handles {lat,lng}, {lat,lon}, {latitude,longitude}, [lat,lng] ──
 function wpLL(w) {
   if (!w) return null;
-  if (Array.isArray(w))           return (w[0] != null && w[1] != null) ? [+w[0], +w[1]] : null;
-  if (w.lat      != null)         return [+w.lat, +w.lng];
-  if (w.latitude != null)         return [+w.latitude, +w.longitude];
+  if (Array.isArray(w))     return (w[0] != null && w[1] != null) ? [+w[0], +w[1]] : null;
+  if (w.lat      != null)   return [+w.lat,      +(w.lng  ?? w.lon  ?? 0)];
+  if (w.latitude != null)   return [+w.latitude, +(w.longitude ?? w.lon ?? 0)];
   return null;
 }
 
@@ -1131,9 +1199,10 @@ function renderRouteMap(rf) {
     }
 
     if (pts) {
+      const isReal = rawWp.length >= 2;
       const poly = L.polyline(pts, {
-        color: "#2ecc71", weight: 3, opacity: 0.8,
-        dashArray: rawWp.length >= 2 ? null : "6 4"   // dashed for interpolated
+        color: "#2ecc71", weight: isReal ? 6 : 3, opacity: isReal ? 0.85 : 0.55,
+        dashArray: isReal ? null : "10 6"
       }).addTo(routeMap);
       routePolylines.push(poly);
       pts.forEach(p => bounds.push(p));
@@ -1190,24 +1259,21 @@ function renderRouteMap(rf) {
 }
 
 // ── Stop interactions ─────────────────────────────────────────────
+// focusStop: called from map marker click — pan map then open sidebar detail
 function focusStop(idx) {
   const rf = routeFiles[selectedRouteIdx];
-  if (!rf || !Array.isArray(rf.data.stops) || !rf.data.stops[idx]) return;
+  if (!rf?.data?.stops?.[idx]) return;
   const s = rf.data.stops[idx];
-  if (routeMap) {
-    routeMap.setView([s.lat, s.lng], Math.max(routeMap.getZoom(), 15), { animate: true });
-  }
+  if (routeMap) routeMap.setView([+s.lat, +s.lng], Math.max(routeMap.getZoom(), 15), { animate: true });
   if (routeMarkers[idx]) routeMarkers[idx].openPopup();
   highlightStop(idx);
 }
 
 function highlightStop(idx) {
-  document.querySelectorAll("#route-stops-list .stop-item").forEach(el => el.classList.remove("active"));
+  // Open the detail block in the sidebar (same as sidebar click)
+  toggleStop(idx);
   const el = document.getElementById(`stop-item-${idx}`);
-  if (el) {
-    el.classList.add("active");
-    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 // ── Drag-and-drop setup ───────────────────────────────────────────
