@@ -40,12 +40,12 @@
   footer {
     max-width: 680px; margin: 0 auto; padding: 24px 32px;
     border-top: 1px solid rgba(255,255,255,0.06);
-    display: flex; flex-direction: column; align-items: center;
-    gap: 12px; text-align: center;
+    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
   }
-  footer p { color: #8a9aaa; font-size: 0.75rem; margin-right: 0; font-family: sans-serif; }
-  footer a { color: #8a9aaa; font-size: 0.75rem; text-decoration: none; font-family: sans-serif; }
+  footer p { color: #3a4a5a; font-size: 0.8rem; margin-right: auto; font-family: sans-serif; }
+  footer a { color: #6a8a9a; font-size: 0.8rem; text-decoration: none; font-family: sans-serif; }
   footer a:hover { color: var(--amber); }
+  @media (max-width: 520px) { main { padding: 40px 16px 64px; } header { padding: 20px 16px; } }
 </style>
 </head>
 <body>
@@ -56,29 +56,31 @@
 </header>
 
 <main>
-  <div class="meta">Effective 1 May 2026 · BusRoute</div>
+  <div class="meta">Effective 8 October 2026 · Klaas Erwin Kouwen, operating as BusRoute</div>
   <h2>End User Licence Agreement</h2>
 
   <div class="warning">
     <p>By tapping "I Accept" in the app you agree to these terms. If you do not agree, do not use this app.</p>
   </div>
 
+  <p>In this agreement, "we", "us" and "the licensor" mean Klaas Erwin Kouwen, operating as BusRoute, Ontario, Canada. "You" means the person using the app.</p>
+
   <section>
     <h3>1. Licence</h3>
-    <p>BusRoute grants you a non-exclusive, non-transferable licence to use BusRoute solely for recording and navigating school bus routes on behalf of the licensed operator named in the app.</p>
+    <p>We grant you a non-exclusive, non-transferable licence to use this app to record and navigate school bus routes on behalf of the bus operator that holds your licence key, or to evaluate the app with a trial key.</p>
   </section>
 
   <section>
     <h3>2. Tool — not a pilot</h3>
-    <p>BusRoute is a <strong>guidance assistance tool only</strong>. It provides information based on previously recorded observations and does not replace the professional judgment of a licensed bus driver.</p>
+    <p>This app is a <strong>guidance assistance tool only</strong>. It provides information based on previously recorded observations and does not replace the professional judgment of a licensed bus driver.</p>
     <p><strong>The driver remains solely and fully responsible for the safe operation of the vehicle at all times, including compliance with all applicable traffic laws and regulations.</strong></p>
     <p>Do not follow any guidance that would require unsafe driving, illegal manoeuvres, or violation of posted traffic controls.</p>
   </section>
 
   <section>
     <h3>3. Data accuracy disclaimer</h3>
-    <p>Route data is derived from observations recorded by human drivers and averaged across multiple runs. It may contain errors or out-of-date information due to road changes, construction, or seasonal conditions.</p>
-    <p>BusRoute makes no warranty of accuracy, completeness, or fitness for any particular use. Route guidance must be verified against actual road conditions before and during each run.</p>
+    <p>Route data comes from observations recorded by human drivers and averaged across multiple runs. It may contain errors or out-of-date information due to road changes, construction, or seasonal conditions.</p>
+    <p>We make no warranty of accuracy, completeness, or fitness for any particular use. Route guidance must be verified against actual road conditions before and during each run.</p>
     <ul>
       <li><strong>GPS accuracy</strong> — Stop locations are accurate to approximately 3–10 metres.</li>
       <li><strong>Arrival times</strong> — Average times will vary based on traffic, weather, and other factors.</li>
@@ -89,7 +91,7 @@
 
   <section>
     <h3>4. Limitation of liability</h3>
-    <p>To the maximum extent permitted by applicable law, BusRoute shall not be liable for any damages arising from the use of or reliance on this app, including personal injury, property damage, or traffic violations.</p>
+    <p>To the maximum extent permitted by applicable law, we shall not be liable for any damages arising from the use of or reliance on this app, including personal injury, property damage, or traffic violations.</p>
   </section>
 
   <section>
@@ -99,25 +101,21 @@
       <li>You hold all licences required to operate the vehicle.</li>
       <li>You will not interact with this app in any way that takes your eyes off the road or hands off the wheel while the vehicle is in motion, except as permitted by law.</li>
       <li>You understand this app is an assistance tool, not a substitute for driver training or professional judgment.</li>
+      <li>You will not enter students' names or other personal details about students in route notes or comments.</li>
     </ul>
   </section>
 
   <section>
-    <h3>6. Privacy</h3>
-    <p>No personally identifiable student information is collected or stored. Student counts are anonymous aggregate numbers only. See our full <a href="privacy.html" style="color: var(--teal);">Privacy Policy</a>.</p>
+    <h3>6. Privacy and data</h3>
+    <p>Location access is required to use this app. It is requested when you enter your licence key. During guidance the app also asks to keep using location while the screen is locked, so guidance continues if the phone locks mid-run.</p>
+    <p>Recorded runs, stop positions, arrival times, student counts and notes are stored on your phone. The app contacts only our own server, osrm.busroute.app: to compute directions (the route's GPS path, not kept), to download map data (which map area is needed, not kept), and to activate a licence key (key, random device identifier, GPS position stored rounded to about 20 km, IP address, date and time). Your bus company can see the approximate location and date of each activation.</p>
+    <p>Our server is in Germany (Hetzner Online). Activation records are kept while the licence is active and deleted within 12 months after it ends; server logs, which may include IP addresses, are kept for up to 14 days. No advertising, analytics or tracking. No personally identifiable student information is collected.</p>
+    <p>Full details, including your rights: <a href="privacy.html" style="color: var(--teal);">Privacy Policy</a>.</p>
   </section>
 
   <section>
-    <h3>7. How we handle updates to these terms</h3>
-    <p>When the terms of service change in a way that affects your rights or the data the app
-    collects, we do not simply present the full legal text again and ask you to scroll to the
-    bottom. Instead, the app shows a plain-language summary of <strong>specifically what
-    changed</strong> — and only that summary must be read before you can continue using the app.
-    The full terms remain accessible for anyone who wants to read them, but we do not treat
-    re-reading unchanged text as meaningful consent.</p>
-    <p>This means that when you accept an updated version of these terms in the app, you have
-    genuinely been shown what is new, in plain language, as a condition of that acceptance.</p>
-    <p>The version of the terms you most recently accepted is recorded on your device.</p>
+    <h3>7. Open-source software and map data</h3>
+    <p>The app includes MapLibre GL JS (BSD 3-Clause licence), the Noto Sans font (SIL Open Font License 1.1) and map data © <a href="https://www.openstreetmap.org/copyright" style="color: var(--teal);">OpenStreetMap contributors</a> (Open Database License), provided via OpenFreeMap and OpenMapTiles. Full notices are in the app under Legal → Credits.</p>
   </section>
 
   <section>
@@ -127,17 +125,14 @@
 
   <section>
     <h3>Contact</h3>
-    <p><a href="mailto:klaas@busroute.app" style="color: var(--teal);">klaas@busroute.app</a></p>
+    <p>Klaas Erwin Kouwen · <a href="mailto:klaas@busroute.app" style="color: var(--teal);">klaas@busroute.app</a></p>
   </section>
 </main>
 
 <footer>
-  <p style="color:#8a9aaa;font-size:0.75rem;text-align:center;margin-bottom:8px;">© 2026 BusRoute. All rights reserved.</p>
-  <div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;">
-    <a href="index.html">Home</a>
-    <a href="privacy.html">Privacy policy</a>
-    <a href="mailto:klaas@busroute.app">Contact</a>
-  </div>
+  <p>© 2026 Klaas Erwin Kouwen · BusRoute</p>
+  <a href="index.html">Home</a>
+  <a href="privacy.html">Privacy policy</a>
 </footer>
 
 </body>
