@@ -428,12 +428,12 @@ const tt     = document.getElementById('tooltip');
 const xline  = document.getElementById('xline');
 const yline  = document.getElementById('yline');
 
-canvas.addEventListener('mousemove', e => {
+function handlePointer(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = W / rect.width;
   const scaleY = H / rect.height;
-  const px = (e.clientX - rect.left) * scaleX;
-  const py = (e.clientY - rect.top)  * scaleY;
+  const px = (clientX - rect.left) * scaleX;
+  const py = (clientY - rect.top)  * scaleY;
   const cfg = activeCfg;
 
   const dist = cfg.distMin + (px / (W-1)) * (cfg.distMax - cfg.distMin);
@@ -445,8 +445,8 @@ canvas.addEventListener('mousemove', e => {
   const cRect = canvas.parentElement.getBoundingClientRect();
   xline.style.display = 'block';
   yline.style.display = 'block';
-  xline.style.left = (e.clientX - cRect.left) + 'px';
-  yline.style.top  = (e.clientY - cRect.top)  + 'px';
+  xline.style.left = (clientX - cRect.left) + 'px';
+  yline.style.top  = (clientY - cRect.top)  + 'px';
 
   tt.style.display = 'block';
   document.getElementById('tt-dot').style.background = sev.col;
@@ -456,20 +456,40 @@ canvas.addEventListener('mousemove', e => {
   document.getElementById('tt-impact').textContent   = cfg.fmtImp(vi);
 
   const margin = 16;
-  const tW = 190, tH = 100;
-  let tx = e.clientX + 16;
-  let ty = e.clientY - 20;
-  if (tx + tW > window.innerWidth - margin)  tx = e.clientX - tW - 12;
-  if (ty + tH > window.innerHeight - margin) ty = e.clientY - tH - 8;
+  const tW = 190, tH = 110;
+  let tx = clientX + 16;
+  let ty = clientY - 20;
+  if (tx + tW > window.innerWidth - margin)  tx = clientX - tW - 12;
+  if (ty + tH > window.innerHeight - margin) ty = clientY - tH - 8;
+  if (ty < margin) ty = margin;
   tt.style.left = tx + 'px';
   tt.style.top  = ty + 'px';
-});
+}
 
-canvas.addEventListener('mouseleave', () => {
+function hidePointer() {
   tt.style.display = 'none';
   xline.style.display = 'none';
   yline.style.display = 'none';
-});
+}
+
+// Mouse
+canvas.addEventListener('mousemove', e => handlePointer(e.clientX, e.clientY));
+canvas.addEventListener('mouseleave', hidePointer);
+
+// Touch
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  handlePointer(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  handlePointer(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  // keep tooltip visible for a moment so user can read it, then hide
+  setTimeout(hidePointer, 1800);
+}, { passive: false });
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(which) {
