@@ -1,0 +1,434 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light only;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#1a1a1e;color:#e8e8e2}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bus Braking Impact Heatmap</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg:       #1a1a1e;
+  --surface:  #24242a;
+  --border:   #3a3a42;
+  --fg:       #e8e8e2;
+  --fg2:      #a8a8a0;
+  --fg3:      #6a6a64;
+  --accent:   #1a4a7a;
+  --tab-act:  #2a6ab0;
+  --tab-idle: #2e2e36;
+  color-scheme: light only;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5;
+  padding: 12px 16px;
+}
+
+/* ── Header ── */
+.hdr { background: var(--accent); color: #fff; border-radius: 10px 10px 0 0; padding: 16px 18px 12px; }
+.hdr h1 { font-size: clamp(14px, 3.5vw, 19px); font-weight: 700; letter-spacing: -.01em; }
+.hdr p  { font-size: clamp(10px, 2.5vw, 11.5px); opacity: .8; margin-top: 4px; }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 3px; background: var(--border); padding: 3px; }
+.tab-btn {
+  flex: 1; border: none; background: var(--tab-idle); color: var(--fg);
+  font: 500 13px/1 'Inter', sans-serif; padding: 8px 12px; border-radius: 5px;
+  cursor: pointer; transition: background .15s, color .15s;
+}
+.tab-btn.active { background: var(--tab-act); color: #fff; }
+
+/* ── Card ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 10px 10px; padding: 14px 14px 18px;
+}
+
+/* ── Chart layout: chart left, legend right; stack on narrow ── */
+.chart-wrap {
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+  align-items: flex-start;
+}
+@media (max-width: 540px) {
+  .chart-wrap { flex-direction: column; }
+}
+
+/* ── Heatmap area ── */
+.hmap-outer { flex: 1 1 0; min-width: 0; }  /* shrinks to fit */
+
+.hmap-grid {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  grid-template-rows: 1fr auto;
+  width: 100%;
+}
+
+/* Y-axis labels */
+.y-axis {
+  grid-column: 1; grid-row: 1;
+  display: flex; flex-direction: column-reverse; justify-content: space-between;
+  padding-right: 5px; padding-bottom: 2px;
+}
+.y-label {
+  font: 500 9px/1 'JetBrains Mono', monospace;
+  color: var(--fg2); text-align: right; font-variant-numeric: tabular-nums;
+}
+
+/* Canvas fills its column, height set by JS to maintain aspect ratio */
+canvas#hmap {
+  grid-column: 2; grid-row: 1;
+  display: block; width: 100%; height: auto;
+  cursor: crosshair; border-radius: 4px;
+  /* no image-rendering:pixelated — we render at native res now */
+}
+
+/* X-axis labels — absolutely positioned inside a relative wrapper */
+.x-axis-wrap {
+  grid-column: 2; grid-row: 2;
+  position: relative; height: 20px;
+}
+.x-label {
+  position: absolute; top: 3px;
+  font: 500 9px/1 'JetBrains Mono', monospace;
+  color: var(--fg2); text-align: center; font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Axis titles */
+.axis-title-x {
+  text-align: center; font-size: 10px; color: var(--fg2);
+  font-weight: 600; letter-spacing: .03em; text-transform: uppercase; margin-top: 4px;
+}
+.y-title-wrap {
+  grid-column: 1; grid-row: 1 / 3;
+  display: flex; align-items: center; justify-content: center;
+}
+.y-title {
+  writing-mode: vertical-lr; transform: rotate(180deg);
+  font-size: 10px; color: var(--fg2); font-weight: 600;
+  letter-spacing: .03em; text-transform: uppercase; white-space: nowrap;
+}
+
+/* crosshairs */
+#xline, #yline { position: absolute; pointer-events: none; display: none; }
+#xline { width: 1px; background: rgba(255,255,255,.5); top: 0; bottom: 0; }
+#yline { height: 1px; background: rgba(255,255,255,.5); left: 0; right: 0; }
+
+/* ── Legend ── */
+.legend {
+  flex: 0 0 auto;
+  min-width: 120px;
+  display: flex; flex-direction: column; gap: 5px; padding-top: 2px;
+}
+@media (max-width: 540px) {
+  .legend {
+    flex-direction: row; flex-wrap: wrap; gap: 8px 16px; min-width: 0;
+  }
+}
+.legend-title {
+  font-size: 10px; font-weight: 700; color: var(--fg2);
+  letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px;
+  flex-basis: 100%;
+}
+.leg-item { display: flex; align-items: flex-start; gap: 7px; }
+.leg-swatch {
+  width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; margin-top: 1px;
+  forced-color-adjust: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.leg-text { font-size: 11px; color: var(--fg); line-height: 1.3; }
+.leg-sub  { font-size: 9.5px; color: var(--fg3); display: block; }
+.grad-bar-wrap { margin-top: 6px; flex-basis: 100%; }
+.grad-bar {
+  height: 8px; border-radius: 4px;
+  background: linear-gradient(to right, #1B6E20, #7B6B00, #C44E00, #A3100A, #6B0000);
+  margin-bottom: 2px;
+}
+.grad-labels { display: flex; justify-content: space-between; font: 9px/1 'JetBrains Mono', monospace; color: var(--fg3); }
+
+/* ── Tooltip ── */
+#tooltip {
+  position: fixed; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 12px; font-size: 12px;
+  pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.14);
+  min-width: 160px; z-index: 100; display: none;
+}
+.tt-sev { font-weight: 700; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 7px; }
+.tt-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tt-row { color: var(--fg2); display: flex; justify-content: space-between; gap: 10px; }
+.tt-val { font: 500 11px/1.4 'JetBrains Mono', monospace; color: var(--fg); font-variant-numeric: tabular-nums; }
+
+.note { font-size: 10px; color: var(--fg3); margin-top: 12px; line-height: 1.55; }
+</style>
+
+<div class="hdr">
+  <h1>School Bus Emergency Braking — Child Impact Severity</h1>
+  <p id="hdr-sub"></p>
+</div>
+<div class="tabs" role="tablist">
+  <button class="tab-btn active" role="tab" data-tab="metric"   onclick="switchTab('metric')">Metric (km/h · m)</button>
+  <button class="tab-btn"        role="tab" data-tab="imperial" onclick="switchTab('imperial')">Imperial (mph · ft)</button>
+</div>
+<div class="card">
+  <div class="chart-wrap">
+    <div class="hmap-outer">
+      <div class="hmap-grid" id="hmap-grid">
+        <div class="y-title-wrap"><div class="y-title" id="ytitle"></div></div>
+        <div class="y-axis" id="yaxis"></div>
+        <canvas id="hmap"></canvas>
+        <div id="xline"></div><div id="yline"></div>
+        <div class="x-axis-wrap" id="xaxis-wrap"></div>
+      </div>
+      <div class="axis-title-x" id="xtitle"></div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-title">Severity</div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#6B0000"></div>
+        <div class="leg-text">Fatal<span class="leg-sub" id="leg-fatal"></span></div></div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#A3100A"></div>
+        <div class="leg-text">Life-altering<span class="leg-sub" id="leg-life"></span></div></div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#C44E00"></div>
+        <div class="leg-text">Severe<span class="leg-sub" id="leg-sev"></span></div></div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#7B6B00"></div>
+        <div class="leg-text">Mild<span class="leg-sub" id="leg-mild"></span></div></div>
+      <div class="leg-item"><div class="leg-swatch" style="background:#1B6E20"></div>
+        <div class="leg-text">Survivable<span class="leg-sub" id="leg-surv"></span></div></div>
+      <div class="grad-bar-wrap">
+        <div class="grad-bar"></div>
+        <div class="grad-labels"><span>Safe</span><span>Fatal</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    Impact speed = child's velocity relative to dashboard at moment of contact.
+    When the bus stops before the child reaches the dashboard, the child hits a stationary surface at the bus's original speed —
+    hence identical impact speeds across all positions beyond the first zone boundary.
+    White lines mark severity boundaries; dashed line marks the aisle end.
+  </p>
+</div>
+
+<div id="tooltip">
+  <div class="tt-sev"><div class="tt-dot" id="tt-dot"></div><span id="tt-sev-lbl"></span></div>
+  <div class="tt-row"><span>Distance</span><span class="tt-val" id="tt-dist"></span></div>
+  <div class="tt-row"><span>Bus speed</span><span class="tt-val" id="tt-spd"></span></div>
+  <div class="tt-row"><span>Impact speed</span><span class="tt-val" id="tt-impact"></span></div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const METRIC = {
+  a: 8, distMin: 0, distMax: 8.5, spdMin: 20, spdMax: 80,
+  xticks: [0,1,2,3,4,5,6,7,8], yticks: [20,30,40,50,60,70,80],
+  busLength: 8.2,
+  tSurv: 2, tMild: 4, tSev: 7, tLife: 10,
+  toV0: s => s / 3.6,
+  fmtDist: d => d.toFixed(1)+' m',
+  fmtSpd:  s => s.toFixed(0)+' km/h',
+  fmtImp:  v => v.toFixed(1)+' m/s',
+  legFatal:'≥ 10 m/s (≥ 36 km/h)', legLife:'7–10 m/s (25–36 km/h)',
+  legSev:  '4–7 m/s (14–25 km/h)', legMild:'2–4 m/s (7–14 km/h)', legSurv:'< 2 m/s (< 7 km/h)',
+  xtitle:'Distance from Dashboard (m)', ytitle:'Bus Speed (km/h)',
+  subtitle:'Deceleration: 8 m/s² · 72-passenger bus (aisle ≈ 8.2 m) · Child unrestrained, standing in aisle',
+};
+const IMPERIAL = {
+  a: 8*3.28084, distMin: 0, distMax: 8.5*3.28084, spdMin: 20/1.60934, spdMax: 80/1.60934,
+  xticks: [0,5,10,15,20,25], yticks: [15,20,25,30,35,40,45,50],
+  busLength: 8.2*3.28084,
+  tSurv: 2*3.281, tMild: 4*3.281, tSev: 7*3.281, tLife: 10*3.281,
+  toV0: s => s*5280/3600,
+  fmtDist: d => d.toFixed(1)+' ft',
+  fmtSpd:  s => s.toFixed(1)+' mph',
+  fmtImp:  v => (v/1.46667).toFixed(1)+' mph',
+  legFatal:'≥ 32.8 ft/s (≥ 22 mph)', legLife:'23–32.8 ft/s (16–22 mph)',
+  legSev:  '13.1–23 ft/s (9–16 mph)', legMild:'6.6–13.1 ft/s (4.5–9 mph)', legSurv:'< 6.6 ft/s (< 4.5 mph)',
+  xtitle:'Distance from Dashboard (ft)', ytitle:'Bus Speed (mph)',
+  subtitle:'Deceleration: 26.2 ft/s² · 72-passenger bus (aisle ≈ 27 ft) · Child unrestrained, standing in aisle',
+};
+
+// ── Zone colours ──────────────────────────────────────────────────────────────
+const ZONE_RGB = {
+  'Survivable':    [0x1B,0x6E,0x20],
+  'Mild':          [0x7B,0x6B,0x00],
+  'Severe':        [0xC4,0x4E,0x00],
+  'Life-altering': [0xA3,0x10,0x0A],
+  'Fatal':         [0x6B,0x00,0x00],
+};
+
+// ── Physics ───────────────────────────────────────────────────────────────────
+function impactSpeed(v0, a, dist) {
+  if (dist <= 0) return 0;
+  return (v0*v0/(2*a) <= dist) ? v0 : Math.sqrt(2*a*dist);
+}
+function severity(vi, cfg) {
+  if (vi >= cfg.tLife) return { lbl:'Fatal',         col:'#6B0000' };
+  if (vi >= cfg.tSev)  return { lbl:'Life-altering', col:'#A3100A' };
+  if (vi >= cfg.tMild) return { lbl:'Severe',        col:'#C44E00' };
+  if (vi >= cfg.tSurv) return { lbl:'Mild',          col:'#7B6B00' };
+  return                       { lbl:'Survivable',   col:'#1B6E20' };
+}
+
+// ── Canvas — redrawn at actual pixel size ─────────────────────────────────────
+const canvas = document.getElementById('hmap');
+const ctx    = canvas.getContext('2d');
+let CW = 0, CH = 0;   // actual canvas pixel dimensions (set on each render)
+
+function distToPx(dist, cfg) { return ((dist-cfg.distMin)/(cfg.distMax-cfg.distMin))*(CW-1); }
+function spdToPy (spd,  cfg) { return (1-(spd-cfg.spdMin)/(cfg.spdMax-cfg.spdMin))*(CH-1); }
+
+function render(cfg) {
+  // Match canvas pixels to its CSS size × devicePixelRatio for sharpness
+  const dpr  = window.devicePixelRatio || 1;
+  const cssW = canvas.offsetWidth;
+  const cssH = Math.round(cssW * 0.62);   // ~420/680 aspect ratio
+  CW = Math.round(cssW * dpr);
+  CH = Math.round(cssH * dpr);
+  canvas.width  = CW;
+  canvas.height = CH;
+  canvas.style.height = cssH + 'px';
+
+  // 1. Heatmap pixels
+  const img = ctx.createImageData(CW, CH);
+  const d = img.data;
+  for (let py = 0; py < CH; py++) {
+    const spd = cfg.spdMax - (py/(CH-1))*(cfg.spdMax-cfg.spdMin);
+    const v0  = cfg.toV0(spd);
+    for (let px = 0; px < CW; px++) {
+      const dist = cfg.distMin + (px/(CW-1))*(cfg.distMax-cfg.distMin);
+      const vi   = impactSpeed(v0, cfg.a, dist);
+      const sev  = severity(vi, cfg);
+      const [r,g,b] = ZONE_RGB[sev.lbl];
+      const i = (py*CW+px)*4;
+      d[i]=r; d[i+1]=g; d[i+2]=b; d[i+3]=255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  // 2. Severity boundary lines (L-shapes)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  ctx.lineWidth = Math.max(2, 3*dpr);
+  ctx.setLineDash([]);
+  [cfg.tSurv, cfg.tMild, cfg.tSev, cfg.tLife].forEach(vt => {
+    const dCorner    = vt*vt/(2*cfg.a);
+    const v0_display = (cfg===METRIC) ? vt*3.6 : vt*3600/5280;
+    const cx = distToPx(dCorner,    cfg);
+    const cy = spdToPy (v0_display, cfg);
+    ctx.beginPath();
+    if (cy >= 0 && cy <= CH) { ctx.moveTo(CW, cy); ctx.lineTo(Math.max(0,cx), cy); }
+    if (cx >= 0 && cx <= CW) { ctx.moveTo(cx, Math.min(CH,cy)); ctx.lineTo(cx, 0); }
+    ctx.stroke();
+  });
+  ctx.restore();
+
+  // 3. Dashed aisle-end line
+  const busX = distToPx(cfg.busLength, cfg);
+  ctx.save();
+  ctx.setLineDash([5*dpr, 4*dpr]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = 2*dpr;
+  ctx.beginPath(); ctx.moveTo(busX,0); ctx.lineTo(busX,CH); ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.font = `bold ${10}px Inter,sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.textAlign = 'center';
+  ctx.fillText('aisle end →', busX/dpr - 2, 13);
+  ctx.restore();
+}
+
+// ── Axes ──────────────────────────────────────────────────────────────────────
+function buildAxes(cfg) {
+  const ya = document.getElementById('yaxis');
+  ya.innerHTML = '';
+  cfg.yticks.forEach(v => {
+    const el = document.createElement('div');
+    el.className = 'y-label'; el.textContent = v; ya.appendChild(el);
+  });
+
+  const wrap = document.getElementById('xaxis-wrap');
+  wrap.innerHTML = '';
+  const cssW = canvas.offsetWidth || 300;
+  cfg.xticks.forEach(v => {
+    const frac = (v-cfg.distMin)/(cfg.distMax-cfg.distMin);
+    const el = document.createElement('div');
+    el.className = 'x-label'; el.textContent = v;
+    el.style.left = (frac*cssW)+'px';
+    wrap.appendChild(el);
+  });
+
+  document.getElementById('xtitle').textContent   = cfg.xtitle;
+  document.getElementById('ytitle').textContent   = cfg.ytitle;
+  document.getElementById('hdr-sub').textContent  = cfg.subtitle;
+  document.getElementById('leg-fatal').textContent = cfg.legFatal;
+  document.getElementById('leg-life').textContent  = cfg.legLife;
+  document.getElementById('leg-sev').textContent   = cfg.legSev;
+  document.getElementById('leg-mild').textContent  = cfg.legMild;
+  document.getElementById('leg-surv').textContent  = cfg.legSurv;
+}
+
+// ── Pointer (mouse + touch) ───────────────────────────────────────────────────
+let activeCfg = METRIC;
+const tt    = document.getElementById('tooltip');
+const xline = document.getElementById('xline');
+const yline = document.getElementById('yline');
+
+function handlePointer(clientX, clientY) {
+  const rect  = canvas.getBoundingClientRect();
+  const frac_x = (clientX-rect.left)/rect.width;
+  const frac_y = (clientY-rect.top)/rect.height;
+  const cfg = activeCfg;
+  const dist = cfg.distMin + frac_x*(cfg.distMax-cfg.distMin);
+  const spd  = cfg.spdMax  - frac_y*(cfg.spdMax -cfg.spdMin);
+  const vi   = impactSpeed(cfg.toV0(spd), cfg.a, dist);
+  const sev  = severity(vi, cfg);
+
+  const cRect = canvas.parentElement.getBoundingClientRect();
+  xline.style.display = 'block'; xline.style.left = (clientX-cRect.left)+'px';
+  yline.style.display = 'block'; yline.style.top  = (clientY-cRect.top) +'px';
+
+  tt.style.display = 'block';
+  document.getElementById('tt-dot').style.background    = sev.col;
+  document.getElementById('tt-sev-lbl').textContent     = sev.lbl;
+  document.getElementById('tt-dist').textContent        = cfg.fmtDist(Math.max(0,dist));
+  document.getElementById('tt-spd').textContent         = cfg.fmtSpd(Math.max(cfg.spdMin,spd));
+  document.getElementById('tt-impact').textContent      = cfg.fmtImp(vi);
+
+  const margin=14, tW=175, tH=105;
+  let tx=clientX+16, ty=clientY-20;
+  if (tx+tW>window.innerWidth-margin)  tx=clientX-tW-12;
+  if (ty+tH>window.innerHeight-margin) ty=clientY-tH-8;
+  if (ty<margin) ty=margin;
+  tt.style.left=tx+'px'; tt.style.top=ty+'px';
+}
+function hidePointer() {
+  tt.style.display='none'; xline.style.display='none'; yline.style.display='none';
+}
+canvas.addEventListener('mousemove',  e => handlePointer(e.clientX,e.clientY));
+canvas.addEventListener('mouseleave', hidePointer);
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); handlePointer(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
+canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); handlePointer(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
+canvas.addEventListener('touchend',   e=>{ e.preventDefault(); setTimeout(hidePointer,1800); },{passive:false});
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(which) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===which));
+  activeCfg = which==='metric' ? METRIC : IMPERIAL;
+  render(activeCfg);
+  buildAxes(activeCfg);
+}
+
+// ── Resize: re-render at new size ─────────────────────────────────────────────
+let resizeTimer;
+new ResizeObserver(() => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { render(activeCfg); buildAxes(activeCfg); }, 60);
+}).observe(canvas);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+switchTab('metric');
+</script>
+</body></html>
