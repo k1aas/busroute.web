@@ -194,7 +194,7 @@ canvas#hmap {
       <div class="leg-item"><div class="leg-swatch" style="background:#7B6B00"></div>
         <div class="leg-text">Mild<span class="leg-sub" id="leg-mild"></span></div></div>
       <div class="leg-item"><div class="leg-swatch" style="background:#1B6E20"></div>
-        <div class="leg-text">Survivable<span class="leg-sub" id="leg-surv"></span></div></div>
+        <div class="leg-text">Minor<span class="leg-sub" id="leg-surv"></span></div></div>
       <div class="grad-bar-wrap">
         <div class="grad-bar"></div>
         <div class="grad-labels"><span>Safe</span><span>Fatal</span></div>
@@ -220,37 +220,41 @@ canvas#hmap {
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const METRIC = {
-  a: 8, distMin: 0, distMax: 8.5, spdMin: 20, spdMax: 80,
+  a: 5, distMin: 0, distMax: 8.5, spdMin: 20, spdMax: 80,
   xticks: [0,1,2,3,4,5,6,7,8], yticks: [20,30,40,50,60,70,80],
   busLength: 8.2,
   tSurv: 2, tMild: 4, tSev: 7, tLife: 10,
-  toV0: s => s / 3.6,
+  toV0: s => s / 3.6,     // display speed → m/s
+  toSI_dist: d => d,      // display dist → m
+  a_si: 5,
   fmtDist: d => d.toFixed(1)+' m',
   fmtSpd:  s => s.toFixed(0)+' km/h',
   fmtImp:  v => v.toFixed(1)+' m/s',
   legFatal:'≥ 10 m/s (≥ 36 km/h)', legLife:'7–10 m/s (25–36 km/h)',
   legSev:  '4–7 m/s (14–25 km/h)', legMild:'2–4 m/s (7–14 km/h)', legSurv:'< 2 m/s (< 7 km/h)',
   xtitle:'Distance from Dashboard (m)', ytitle:'Bus Speed (km/h)',
-  subtitle:'Deceleration: 8 m/s² · 72-passenger bus (aisle ≈ 8.2 m) · Child unrestrained, standing in aisle',
+  subtitle:'Deceleration: 5 m/s² · Floor friction µ=0.2 · 72-passenger bus (aisle ≈ 8.2 m) · Child unrestrained, standing in aisle',
 };
 const IMPERIAL = {
-  a: 8*3.28084, distMin: 0, distMax: 8.5*3.28084, spdMin: 20/1.60934, spdMax: 80/1.60934,
+  a: 5*3.28084, distMin: 0, distMax: 8.5*3.28084, spdMin: 20/1.60934, spdMax: 80/1.60934,
   xticks: [0,5,10,15,20,25], yticks: [15,20,25,30,35,40,45,50],
   busLength: 8.2*3.28084,
   tSurv: 2*3.281, tMild: 4*3.281, tSev: 7*3.281, tLife: 10*3.281,
-  toV0: s => s*5280/3600,
+  toV0: s => s*1609.34/3600, // mph → m/s (SI for physics)
+  toSI_dist: d => d/3.28084, // ft → m
+  a_si: 5,
   fmtDist: d => d.toFixed(1)+' ft',
   fmtSpd:  s => s.toFixed(1)+' mph',
   fmtImp:  v => (v/1.46667).toFixed(1)+' mph',
   legFatal:'≥ 32.8 ft/s (≥ 22 mph)', legLife:'23–32.8 ft/s (16–22 mph)',
   legSev:  '13.1–23 ft/s (9–16 mph)', legMild:'6.6–13.1 ft/s (4.5–9 mph)', legSurv:'< 6.6 ft/s (< 4.5 mph)',
   xtitle:'Distance from Dashboard (ft)', ytitle:'Bus Speed (mph)',
-  subtitle:'Deceleration: 26.2 ft/s² · 72-passenger bus (aisle ≈ 27 ft) · Child unrestrained, standing in aisle',
+  subtitle:'Deceleration: 16.4 ft/s² · Floor friction µ=0.2 · 72-passenger bus (aisle ≈ 27 ft) · Child unrestrained, standing in aisle',
 };
 
 // ── Zone colours ──────────────────────────────────────────────────────────────
 const ZONE_RGB = {
-  'Survivable':    [0x1B,0x6E,0x20],
+  'Minor':    [0x1B,0x6E,0x20],
   'Mild':          [0x7B,0x6B,0x00],
   'Severe':        [0xC4,0x4E,0x00],
   'Life-altering': [0xA3,0x10,0x0A],
@@ -258,16 +262,61 @@ const ZONE_RGB = {
 };
 
 // ── Physics ───────────────────────────────────────────────────────────────────
-function impactSpeed(v0, a, dist) {
-  if (dist <= 0) return 0;
-  return (v0*v0/(2*a) <= dist) ? v0 : Math.sqrt(2*a*dist);
+// µ = child-floor friction coefficient (body sliding/tumbling, not upright)
+const MU = 0.2;
+const G  = 9.80665; // m/s²
+
+// Returns child impact speed (m/s) given:
+//   v0   = initial bus speed (m/s, SI always)
+//   a    = bus deceleration (m/s², SI always)
+//   dist = child's distance from dashboard (m, SI always)
+//
+// In the ground frame:
+//   Child decelerates at µg (friction).
+//   Bus front decelerates at a, stops at t_stop = v0/a.
+//   Relative acceleration of child w.r.t. bus = (a - µg), directed forward.
+//   Relative displacement s_rel(t) = ½(a-µg)t²  (child starts flush with position)
+//   Relative velocity    v_rel(t) = (a-µg)t
+//
+//   Phase 1 — bus still moving (0 ≤ t ≤ t_stop):
+//     Child reaches dashboard when s_rel = dist  →  t* = sqrt(2·dist/(a-µg))
+//     If t* ≤ t_stop: impact during braking, v_impact = v_rel(t*) = sqrt(2(a-µg)·dist)
+//
+//   Phase 2 — bus stopped, child still sliding:
+//     Child speed at t_stop: v_child = max(0, v0 - µg·t_stop)
+//     Remaining distance: dist - s_rel(t_stop)
+//     Child decelerates at µg until either reaching dashboard or stopping.
+//     v_impact² = v_child² - 2·µg·remaining  (if positive)
+function impactSpeed(v0_si, a_si, dist_si) {
+  if (dist_si <= 0) return 0;
+  const mu_g = MU * G;
+  const rel_a = a_si - mu_g;   // relative acceleration child→dashboard
+
+  if (rel_a <= 0) {
+    // Friction ≥ bus deceleration: child never catches up, no impact
+    return 0;
+  }
+
+  const t_stop   = v0_si / a_si;
+  const s_at_stop = 0.5 * rel_a * t_stop * t_stop;  // relative dist child travels while bus brakes
+
+  if (s_at_stop >= dist_si) {
+    // Impact during braking phase
+    return Math.sqrt(2 * rel_a * dist_si);
+  }
+
+  // Bus has stopped; child still moving
+  const v_child_at_stop = Math.max(0, v0_si - mu_g * t_stop);
+  const remaining = dist_si - s_at_stop;
+  const v2 = v_child_at_stop * v_child_at_stop - 2 * mu_g * remaining;
+  return v2 > 0 ? Math.sqrt(v2) : 0;
 }
 function severity(vi, cfg) {
   if (vi >= cfg.tLife) return { lbl:'Fatal',         col:'#6B0000' };
   if (vi >= cfg.tSev)  return { lbl:'Life-altering', col:'#A3100A' };
   if (vi >= cfg.tMild) return { lbl:'Severe',        col:'#C44E00' };
   if (vi >= cfg.tSurv) return { lbl:'Mild',          col:'#7B6B00' };
-  return                       { lbl:'Survivable',   col:'#1B6E20' };
+  return                       { lbl:'Minor',   col:'#1B6E20' };
 }
 
 // ── Canvas — redrawn at actual pixel size ─────────────────────────────────────
@@ -293,11 +342,12 @@ function render(cfg) {
   const img = ctx.createImageData(CW, CH);
   const d = img.data;
   for (let py = 0; py < CH; py++) {
-    const spd = cfg.spdMax - (py/(CH-1))*(cfg.spdMax-cfg.spdMin);
-    const v0  = cfg.toV0(spd);
+    const spd   = cfg.spdMax - (py/(CH-1))*(cfg.spdMax-cfg.spdMin);
+    const v0_si = cfg.toV0(spd);  // always m/s (metric toV0 gives m/s; imperial toV0 gives ft/s → need SI)
     for (let px = 0; px < CW; px++) {
-      const dist = cfg.distMin + (px/(CW-1))*(cfg.distMax-cfg.distMin);
-      const vi   = impactSpeed(v0, cfg.a, dist);
+      const dist    = cfg.distMin + (px/(CW-1))*(cfg.distMax-cfg.distMin);
+      const vi_si   = impactSpeed(v0_si, cfg.a_si, cfg.toSI_dist(dist));
+      const vi      = (cfg===METRIC) ? vi_si : vi_si * 3.28084; // m/s → ft/s for imperial thresholds
       const sev  = severity(vi, cfg);
       const [r,g,b] = ZONE_RGB[sev.lbl];
       const i = (py*CW+px)*4;
@@ -306,19 +356,51 @@ function render(cfg) {
   }
   ctx.putImageData(img, 0, 0);
 
-  // 2. Severity boundary lines (L-shapes)
+  // 2. Severity boundary lines — traced numerically column by column
+  // For each x (distance), binary-search the v0 that gives impactSpeed == vt.
+  // impactSpeed is monotonically increasing in v0, so bisection works cleanly.
   ctx.save();
   ctx.strokeStyle = 'rgba(255,255,255,0.95)';
   ctx.lineWidth = Math.max(2, 3*dpr);
   ctx.setLineDash([]);
+
+  const v0_si_min = cfg.toV0(cfg.spdMin);
+  const v0_si_max = cfg.toV0(cfg.spdMax);
+
   [cfg.tSurv, cfg.tMild, cfg.tSev, cfg.tLife].forEach(vt => {
-    const dCorner    = vt*vt/(2*cfg.a);
-    const v0_display = (cfg===METRIC) ? vt*3.6 : vt*3600/5280;
-    const cx = distToPx(dCorner,    cfg);
-    const cy = spdToPy (v0_display, cfg);
+    const vt_si = (cfg===METRIC) ? vt : vt/3.28084;
+
     ctx.beginPath();
-    if (cy >= 0 && cy <= CH) { ctx.moveTo(CW, cy); ctx.lineTo(Math.max(0,cx), cy); }
-    if (cx >= 0 && cx <= CW) { ctx.moveTo(cx, Math.min(CH,cy)); ctx.lineTo(cx, 0); }
+    let started = false;
+    for (let px = 0; px < CW; px++) {
+      const dist_disp = cfg.distMin + (px/(CW-1))*(cfg.distMax-cfg.distMin);
+      const dist_si   = cfg.toSI_dist(dist_disp);
+
+      // Does this column span the threshold at all?
+      const vi_at_vmax = impactSpeed(v0_si_max, cfg.a_si, dist_si);
+      const vi_at_vmin = impactSpeed(v0_si_min, cfg.a_si, dist_si);
+
+      if (vt_si < vi_at_vmin || vt_si > vi_at_vmax) {
+        // threshold outside the column's range — gap in boundary here
+        started = false;
+        continue;
+      }
+
+      // Bisect for v0_si such that impactSpeed == vt_si
+      let lo = v0_si_min, hi = v0_si_max;
+      for (let i = 0; i < 24; i++) {
+        const mid = (lo+hi)/2;
+        impactSpeed(mid, cfg.a_si, dist_si) < vt_si ? lo=mid : hi=mid;
+      }
+      const v0_boundary = (lo+hi)/2;
+
+      // Convert back to display speed for canvas y position
+      const spd_display = (cfg===METRIC) ? v0_boundary*3.6 : v0_boundary*3600/1609.34;
+      const py = spdToPy(spd_display, cfg);
+
+      if (!started) { ctx.moveTo(px, py); started=true; }
+      else          { ctx.lineTo(px, py); }
+    }
     ctx.stroke();
   });
   ctx.restore();
@@ -383,8 +465,9 @@ function handlePointer(clientX, clientY) {
   const cfg = activeCfg;
   const dist = cfg.distMin + frac_x*(cfg.distMax-cfg.distMin);
   const spd  = cfg.spdMax  - frac_y*(cfg.spdMax -cfg.spdMin);
-  const vi   = impactSpeed(cfg.toV0(spd), cfg.a, dist);
-  const sev  = severity(vi, cfg);
+  const vi_si = impactSpeed(cfg.toV0(spd), cfg.a_si, cfg.toSI_dist(dist));
+  const vi    = (cfg===METRIC) ? vi_si : vi_si * 3.28084;
+  const sev   = severity(vi, cfg);
 
   const cRect = canvas.parentElement.getBoundingClientRect();
   xline.style.display = 'block'; xline.style.left = (clientX-cRect.left)+'px';
