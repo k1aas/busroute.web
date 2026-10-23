@@ -1,0 +1,769 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bus Braking — Child Safety</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root {
+  --bg:      #1c1c20;
+  --surface: #26262c;
+  --border:  #3a3a44;
+  --accent:  #f5c400;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: #ffffff;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100%;
+  padding-block: 16px;
+  padding-left:  max(16px, env(safe-area-inset-left,  0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+h1 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(20px,5vw,30px); font-weight: 700;
+  letter-spacing: .01em; text-transform: uppercase;
+  color: var(--accent); text-align: center; line-height: 1.1;
+}
+h1 span { color: #ffffff; font-weight: 400; font-size: .6em; display: block; text-transform: none; letter-spacing: 0; margin-top: 3px; }
+
+.scene-wrap {
+  width: 100%; max-width: 760px;
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0d1a28;
+  position: relative;
+}
+canvas#scene { display: block; width: 100%; height: auto; }
+
+.scenario-label {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.75); color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(13px,3.2vw,19px); font-weight: 600;
+  padding: 4px 14px; border-radius: 20px; white-space: nowrap;
+  pointer-events: none; letter-spacing: .04em;
+}
+
+.impact-row {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; pointer-events: none; flex-wrap: wrap; justify-content: center;
+  width: 96%;
+}
+.impact-badge {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(13px,2.8vw,17px); font-weight: 700;
+  padding: 3px 11px; border-radius: 12px;
+  opacity: 0; transition: opacity .3s;
+  white-space: nowrap; letter-spacing: .03em;
+}
+.impact-badge.show { opacity: 1; }
+
+.controls { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 12px; }
+
+.unit-row {
+  display: flex; gap: 0; justify-content: center;
+  border: 2px solid var(--border); border-radius: 8px; overflow: hidden; align-self: center;
+}
+.unit-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  border: none; background: var(--surface); color: #ffffff;
+  padding: 7px 20px; cursor: pointer; transition: background .15s;
+}
+.unit-btn.active { background: var(--border); }
+
+.speed-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.spd-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  border: 2px solid var(--border); background: var(--surface); color: #ffffff;
+  padding: 8px 18px; border-radius: 8px; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.spd-btn:hover  { border-color: var(--accent); }
+.spd-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a00; }
+
+.action-row { display: flex; gap: 10px; justify-content: center; }
+.btn-brake {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(15px,4vw,18px); font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  background: #c0392b; color: #fff; border: none;
+  padding: 12px 32px; border-radius: 10px; cursor: pointer;
+  transition: background .15s, transform .1s;
+  box-shadow: 0 3px 12px rgba(192,57,43,.35);
+}
+.btn-brake:hover   { background: #e74c3c; }
+.btn-brake:active  { transform: scale(.96); }
+.btn-brake:disabled { background: #555; box-shadow: none; cursor: default; }
+.btn-reset {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(14px,3.5vw,17px); font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  background: var(--surface); color: #ffffff; border: 2px solid var(--border);
+  padding: 12px 24px; border-radius: 10px; cursor: pointer;
+  transition: background .15s;
+}
+.btn-reset:hover { background: var(--border); }
+
+.legend {
+  width: 100%; max-width: 760px;
+  display: flex; flex-wrap: wrap; gap: 10px 22px; justify-content: center;
+}
+.leg-item { display: flex; align-items: center; gap: 7px; font-size: 16px; color: #ffffff; }
+.leg-dot  { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+.note {
+  width: 100%; max-width: 760px;
+  font-size: 14px; color: #ffffff; line-height: 1.7; text-align: center;
+}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500&display=swap">
+
+<h1>Emergency Braking<span>What happens to children standing in the aisle?</span></h1>
+
+<div class="scene-wrap">
+  <canvas id="scene" width="760" height="320"></canvas>
+  <div class="scenario-label" id="scn-label">Choose a speed, then brake</div>
+  <div class="impact-row" id="impact-row"></div>
+</div>
+
+<div class="controls">
+  <div class="unit-row">
+    <button class="unit-btn active" id="unit-metric">Metric (km/h)</button>
+    <button class="unit-btn"        id="unit-imperial">Imperial (mph)</button>
+  </div>
+  <div class="speed-row" id="speed-row"></div>
+  <div class="action-row">
+    <button class="btn-brake" id="btn-brake">⚠ Emergency Stop</button>
+    <button class="btn-reset" id="btn-reset">Reset</button>
+  </div>
+</div>
+
+<div class="legend" id="legend"></div>
+<p class="note" id="note-text"></p>
+
+<script>
+// ── Physics ────────────────────────────────────────────────────────────────
+const A_BUS = 5, MU = 0.2, G = 9.80665, AISLE = 8.2;
+
+const SEV = [
+  { min: 4, lbl:'Severe', col:'#C44E00' },
+  { min: 2, lbl:'Mild',   col:'#8a7200' },
+  { min: 0, lbl:'Minor',  col:'#1B6E20' },
+];
+function getSev(vi) { return SEV.find(s => vi >= s.min) || SEV[SEV.length-1]; }
+
+function impactSpeed(v0, dist) {
+  if (dist <= 0) return 0;
+  const mug = MU*G, ra = A_BUS - mug;
+  if (ra <= 0) return 0;
+  const ts = v0/A_BUS, s1 = 0.5*ra*ts*ts;
+  if (s1 >= dist) return Math.sqrt(2*ra*dist);
+  const vc = Math.max(0, v0 - mug*ts);
+  const v2 = vc*vc - 2*mug*(dist-s1);
+  return v2 > 0 ? Math.sqrt(v2) : 0;
+}
+
+// ── Units ──────────────────────────────────────────────────────────────────
+const UNITS = {
+  metric:   { speeds:[20,40,60,80], def:20, toMS: v=>v/3.6,
+              fmtV: v=>`${Math.round(v*3.6)} km/h`, fmtI: v=>`${v.toFixed(1)} m/s` },
+  imperial: { speeds:[14,26,38,50], def:14, toMS: v=>v*1609.34/3600,
+              fmtV: v=>`${Math.round(v*3600/1609.34)} mph`, fmtI: v=>`${(v*2.237).toFixed(1)} mph` },
+};
+let unit = UNITS.metric;
+let busV0 = unit.toMS(unit.def);
+
+// ── Canvas layout ──────────────────────────────────────────────────────────
+const canvas = document.getElementById('scene');
+const ctx    = canvas.getContext('2d');
+const W = 760, H = 320;
+
+// Bus exterior geometry — Type C school bus side view
+// Classic school bus: short flat-front cab noticeably lower than main body roof
+const BODY_LEFT  = 148;   // where the main body starts (right edge of cab)
+const BODY_RIGHT = 730;
+const CAB_LEFT   = 28;    // left edge of the front cab face
+const BUS_TOP    = 44;    // top of BODY roof (tall)
+const CAB_TOP    = 72;    // top of CAB roof (shorter than body — signature school bus look)
+const ROOF_BOT   = 64;    // bottom of white roof band on body
+const WIN_BOT    = 132;   // bottom of window strip
+const STRIPE_TOP = 136;   // top of black stripe
+const STRIPE_BOT = 160;   // bottom of black stripe
+const BODY_BOT   = 208;   // bottom of yellow lower body
+const GROUND_Y   = 252;   // road surface
+const CAB_BOT    = BODY_BOT; // cab bottom aligns with body
+
+// Interior drawing coords (inside the bus looking from side)
+const INT_LEFT  = BODY_LEFT + 32;  // skip past door area
+const INT_RIGHT = BODY_RIGHT - 8;
+const CEIL_Y    = ROOF_BOT + 4;
+const FLOOR_Y   = BODY_BOT - 2;
+
+function aisleDistToPx(d) {
+  // dist=0 → dashboard (INT_LEFT+20), dist=AISLE → rear
+  // Apply ease-in curve: children appear to accelerate toward the front
+  const t = d / AISLE;  // 0=front, 1=rear
+  // Use t^0.7 so the near-front portion is compressed (children lunge forward fast)
+  const tCurved = Math.pow(Math.max(0, t), 0.7);
+  return INT_LEFT + 20 + tCurved * (INT_RIGHT - INT_LEFT - 38);
+}
+
+// ── Children ───────────────────────────────────────────────────────────────
+const CHILDREN_INIT = [
+  { dist: 1.5, color: '#e8b84b', lbl:'Child A' },
+  { dist: 4.0, color: '#e87840', lbl:'Child B' },
+  { dist: 7.0, color: '#4b9ee8', lbl:'Child C' },
+];
+let children = [], animState = 'idle', brakeStart = null, raf = null;
+
+function initChildren() {
+  children = CHILDREN_INIT.map(c => ({
+    ...c,
+    x: aisleDistToPx(c.dist),
+    y: FLOOR_Y,          // feet on floor — child is drawn upward from here
+    distNow: c.dist,
+    impacted: false,
+    tumble: 0,
+    tumbleDir: (Math.random()>.5)?1:-1,
+    impactV: 0,
+    flashAlpha: 0,
+    legPhase: 0,
+    velY: 0,             // vertical velocity for physics after impact
+    airborne: false,
+  }));
+}
+
+function startScreech() {}
+function stopScreech() {}
+
+// ── Drawing ────────────────────────────────────────────────────────────────
+function drawBackground() {
+  // Sky
+  const sky = ctx.createLinearGradient(0, 0, 0, BUS_TOP);
+  sky.addColorStop(0, '#0a1520'); sky.addColorStop(1, '#1a2a3a');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, BUS_TOP);
+
+  // Road
+  ctx.fillStyle = '#1e1e1e'; ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+  ctx.fillStyle = '#888'; ctx.fillRect(0, GROUND_Y, W, 3);
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 3; ctx.setLineDash([28, 18]);
+  ctx.beginPath(); ctx.moveTo(0, GROUND_Y + 30); ctx.lineTo(W, GROUND_Y + 30); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawBus() {
+  // === Type C School Bus — proper profile ===
+  // Key visual: BODY is tall (roof at BUS_TOP=44), CAB is shorter (roof at CAB_TOP=72)
+  // This step-down is the most recognisable feature of a school bus silhouette
+
+  const wheelR = 32;
+  const wheelY = GROUND_Y + 2;
+  // Front wheel under cab, rear wheel ~4 seats from back
+  const frontWheelX = CAB_LEFT + 62;
+  const rearWheelX  = BODY_RIGHT - 168;  // ≈ 4th row from back
+
+  // ── Wheel arch cutouts first (so body panels paint over them) ──
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(frontWheelX, wheelY, wheelR + 6, Math.PI, 0); ctx.fill();
+  ctx.beginPath(); ctx.arc(rearWheelX,  wheelY, wheelR + 6, Math.PI, 0); ctx.fill();
+
+  // ═══════════════════════════════════════════
+  //  MAIN BODY  (tall yellow box)
+  // ═══════════════════════════════════════════
+
+  // White roof band (top strip of body)
+  ctx.fillStyle = '#e8e4d8';
+  ctx.beginPath(); ctx.roundRect(BODY_LEFT, BUS_TOP, BODY_RIGHT - BODY_LEFT, ROOF_BOT - BUS_TOP, [0, 4, 0, 0]);
+  ctx.fill();
+
+  // Yellow: windows-to-stripe gap
+  ctx.fillStyle = '#f5c400';
+  ctx.fillRect(BODY_LEFT, ROOF_BOT, BODY_RIGHT - BODY_LEFT, WIN_BOT - ROOF_BOT);
+
+  // Body windows strip
+  const winH    = WIN_BOT - ROOF_BOT - 2;
+  const winTopY = ROOF_BOT + 1;
+  const winW = 48, winGap = 58;
+  let wx = BODY_LEFT + 36;
+  while (wx + winW <= BODY_RIGHT - 6) {
+    ctx.fillStyle = '#7ab8e0';
+    ctx.beginPath(); ctx.roundRect(wx, winTopY, winW, winH, [2,2,0,0]); ctx.fill();
+    ctx.strokeStyle = '#c49b00'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#a88000'; ctx.fillRect(wx-1, winTopY+winH, winW+2, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(wx+3, winTopY+3, 10, winH-8);
+    ctx.strokeStyle = '#c49b00'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(wx+winW/2, winTopY); ctx.lineTo(wx+winW/2, winTopY+winH); ctx.stroke();
+    wx += winGap;
+  }
+
+  // Black stripe (body)
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(BODY_LEFT, STRIPE_TOP, BODY_RIGHT - BODY_LEFT, STRIPE_BOT - STRIPE_TOP);
+
+  // Yellow lower body panel
+  ctx.fillStyle = '#f5c400';
+  ctx.fillRect(BODY_LEFT, STRIPE_BOT, BODY_RIGHT - BODY_LEFT, BODY_BOT - STRIPE_BOT);
+
+  // Stop sign on body side
+  ctx.fillStyle = '#cc2200';
+  ctx.beginPath(); ctx.arc(BODY_LEFT + 20, STRIPE_TOP + 12, 11, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(BODY_LEFT + 20, STRIPE_TOP + 12, 9, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('STOP', BODY_LEFT + 20, STRIPE_TOP + 16);
+
+  // Door at front of body
+  const doorX = BODY_LEFT + 2, doorW = 28;
+  const doorTop2 = WIN_BOT + 2, doorH2 = BODY_BOT - WIN_BOT - 4;
+  ctx.fillStyle = '#f0c000';
+  ctx.beginPath(); ctx.roundRect(doorX, doorTop2, doorW, doorH2, 2); ctx.fill();
+  ctx.strokeStyle = '#a88000'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(doorX + doorW/2, doorTop2); ctx.lineTo(doorX + doorW/2, doorTop2 + doorH2); ctx.stroke();
+
+  // Rear cap
+  ctx.fillStyle = '#c49b00'; ctx.fillRect(BODY_RIGHT - 5, BUS_TOP, 8, BODY_BOT - BUS_TOP);
+  ctx.fillStyle = '#cc1100';
+  ctx.beginPath(); ctx.roundRect(BODY_RIGHT + 1, BUS_TOP + 16, 8, 22, 2); ctx.fill();
+  ctx.fillStyle = '#ff8800';
+  ctx.beginPath(); ctx.roundRect(BODY_RIGHT + 1, BUS_TOP + 42, 8, 14, 2); ctx.fill();
+
+  // ═══════════════════════════════════════════
+  //  CAB (shorter — distinctive school bus step-down)
+  //  CAB_TOP (72) is visibly lower than BUS_TOP (44)
+  // ═══════════════════════════════════════════
+  const cabW = BODY_LEFT - CAB_LEFT;  // ~120px
+
+  // ── Cab: lower panel only (no windshield / upper half removed) ──
+  // The cab face starts at WIN_BOT — only the yellow belt + black stripe + bumper are shown.
+  // The upper portion (windshield, roof) is left open/cut so only the lower block is visible.
+
+  // Yellow lower cab panel (WIN_BOT → BODY_BOT), rounded front corner
+  ctx.fillStyle = '#f5c400';
+  ctx.beginPath();
+  ctx.moveTo(BODY_LEFT, WIN_BOT);           // top-right: joins body at window-bottom line
+  ctx.lineTo(CAB_LEFT + 10, WIN_BOT);       // top-left
+  ctx.quadraticCurveTo(CAB_LEFT, WIN_BOT, CAB_LEFT, WIN_BOT + 10); // rounded top-front corner
+  ctx.lineTo(CAB_LEFT, BODY_BOT - 10);      // front face down
+  ctx.quadraticCurveTo(CAB_LEFT, BODY_BOT, CAB_LEFT + 10, BODY_BOT); // rounded bottom corner
+  ctx.lineTo(BODY_LEFT, BODY_BOT);          // bottom-right
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#c49b00'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Black stripe through cab (continuous with body stripe)
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(CAB_LEFT, STRIPE_TOP, cabW, STRIPE_BOT - STRIPE_TOP);
+
+  // Headlights — rectangular, at the top corners of the lower cab face
+  ctx.fillStyle = '#fffbe0';
+  ctx.beginPath(); ctx.roundRect(CAB_LEFT + 4, WIN_BOT + 4, 18, 12, 3); ctx.fill();
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1; ctx.stroke();
+
+  // Amber indicator
+  ctx.fillStyle = '#ff9900';
+  ctx.beginPath(); ctx.roundRect(CAB_LEFT + 4, WIN_BOT + 20, 13, 8, 2); ctx.fill();
+
+  // Lower driving lights (below stripe)
+  ctx.fillStyle = '#ffe080';
+  ctx.beginPath(); ctx.roundRect(CAB_LEFT + 4, STRIPE_BOT + 6, 15, 10, 2); ctx.fill();
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 0.8; ctx.stroke();
+
+  // Front bumper
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.roundRect(CAB_LEFT, BODY_BOT, cabW - 2, 14, [0, 0, 4, 4]); ctx.fill();
+
+  // ═══════════════════════════════════════════
+  //  WHEELS  (drawn last, on top)
+  // ═══════════════════════════════════════════
+  function drawWheel(wx2, dual) {
+    if (dual) {
+      [-5, 5].forEach(off => {
+        ctx.fillStyle = '#111';
+        ctx.beginPath(); ctx.arc(wx2, wheelY + off, wheelR - 2, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(wx2, wheelY + off, wheelR - 2, 0, Math.PI*2); ctx.stroke();
+      });
+      ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(wx2, wheelY, 10, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#777'; ctx.lineWidth = 1.2;
+      for (let a = 0; a < Math.PI*2; a += Math.PI/4) {
+        ctx.beginPath();
+        ctx.moveTo(wx2 + Math.cos(a)*12, wheelY + Math.sin(a)*12);
+        ctx.lineTo(wx2 + Math.cos(a)*(wheelR-4), wheelY + Math.sin(a)*(wheelR-4));
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(wx2, wheelY, wheelR - 4, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(wx2, wheelY, wheelR, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(wx2, wheelY, wheelR, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(wx2, wheelY, 11, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#777'; ctx.lineWidth = 1.5;
+      for (let a = 0; a < Math.PI*2; a += Math.PI/4) {
+        ctx.beginPath();
+        ctx.moveTo(wx2 + Math.cos(a)*13, wheelY + Math.sin(a)*13);
+        ctx.lineTo(wx2 + Math.cos(a)*(wheelR-3), wheelY + Math.sin(a)*(wheelR-3));
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(wx2, wheelY, wheelR - 3, 0, Math.PI*2); ctx.stroke();
+    }
+  }
+  drawWheel(frontWheelX, false);
+  drawWheel(rearWheelX,  true);
+}
+
+function drawInterior() {
+  // Interior ceiling
+  ctx.fillStyle = '#c8c0a0'; ctx.fillRect(INT_LEFT, CEIL_Y, INT_RIGHT-INT_LEFT, 5);
+
+  // Interior floor
+  ctx.fillStyle = '#4a3a22'; ctx.fillRect(INT_LEFT, FLOOR_Y, INT_RIGHT-INT_LEFT, 6);
+
+  // ── Seats: side-view profile (L-shape) ──
+  // Each seat pair seen from the side: tall back on the rear edge, horizontal cushion extending forward
+  const seatFloor  = FLOOR_Y - 2 - 23;   // raised ~half the back height above floor
+  const cushionH   = 13;            // thickness of the seat cushion
+  const cushionW   = 38;            // how far the cushion extends forward (toward front of bus)
+  const backH      = 46;            // height of seat back above cushion
+  const backW      = 8;             // thickness of seat back
+  const sGap       = 58;            // spacing between seat pairs
+
+  for (let bx = INT_LEFT + 44; bx + backW < INT_RIGHT - 10; bx += sGap) {
+    // bx = left edge of the back panel; cushion extends to the LEFT (toward front of bus)
+    const cushionTop = seatFloor - cushionH;
+    const backTop    = cushionTop - backH;
+
+    // Seat back panel
+    const bg = ctx.createLinearGradient(bx, 0, bx + backW, 0);
+    bg.addColorStop(0, '#24522a'); bg.addColorStop(1, '#163416');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.roundRect(bx, backTop, backW, backH + cushionH, [3,3,2,2]); ctx.fill();
+
+    // Headrest notch at top of back
+    ctx.fillStyle = '#2e682e';
+    ctx.beginPath(); ctx.roundRect(bx + 1, backTop - 7, backW - 2, 10, [3,3,0,0]); ctx.fill();
+
+    // Seat cushion extending forward (left)
+    const cg = ctx.createLinearGradient(0, cushionTop, 0, seatFloor);
+    cg.addColorStop(0, '#2e682e'); cg.addColorStop(1, '#163416');
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.roundRect(bx - cushionW, cushionTop, cushionW, cushionH, [2,0,2,2]); ctx.fill();
+
+    // Subtle highlight on cushion top
+    ctx.strokeStyle = '#3a8a3a'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(bx - cushionW + 4, cushionTop + 4);
+    ctx.lineTo(bx - 2,            cushionTop + 4);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Dashboard front wall (dark, behind steering wheel area)
+  ctx.fillStyle = '#242424'; ctx.fillRect(INT_LEFT, CEIL_Y+4, 18, FLOOR_Y-CEIL_Y-4);
+}
+
+// ── Children: grounded, proper scale ──────────────────────────────────────
+const SC = 1.6; // scale multiplier — children are 1.6× base size
+
+function drawChild(child) {
+  const col = child.color;
+  ctx.save();
+
+  if (child.impacted && child.impactV > 0) {
+    // Hit the front wall — slumped heap near dashboard
+    const idx = CHILDREN_INIT.findIndex(c => c.color === child.color);
+    ctx.translate(INT_LEFT + 28 + idx * 22, FLOOR_Y - 14);
+    ctx.rotate(0.5 - idx * 0.22);
+    ctx.scale(SC * 0.85, SC * 0.85);
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(0, 0, 11, 16, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(4, -19, 9, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-6,6);  ctx.lineTo(-16,18); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(6,6);   ctx.lineTo(16,20);  ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4,12); ctx.lineTo(-14,26); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4,12);  ctx.lineTo(14,28);  ctx.stroke();
+  } else if (child.impacted && child.impactV === 0) {
+    // Slid but stopped short — draw standing (leaning) at their final x position
+    ctx.translate(child.x, FLOOR_Y);
+    ctx.rotate(child.tumble * Math.PI / 180);
+    ctx.scale(SC, SC);
+    // Legs — longer
+    ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(-9, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo( 9, 0); ctx.stroke();
+    // Torso
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(0, -34, 9, 15, 0, 0, Math.PI*2); ctx.fill();
+    // Arms (hanging still)
+    ctx.strokeStyle = col; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-5, -40); ctx.lineTo(-18, -28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( 5, -40); ctx.lineTo( 18, -28); ctx.stroke();
+    // Head
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(0, -53, 11, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-3.5, -54, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 3.5, -54, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(-3.5, -54, 1.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 3.5, -54, 1.2, 0, Math.PI*2); ctx.fill();
+  } else {
+    // Standing upright; translate to floor line, figure drawn upward in local coords (y=0 = feet)
+    ctx.translate(child.x, FLOOR_Y);
+    ctx.rotate(child.tumble * Math.PI / 180);
+    ctx.scale(SC, SC);
+
+    const ls = Math.sin(child.legPhase) * 0.28;
+
+    // Legs — longer: hip at y=-18, feet at y=0
+    ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(-9 + ls*8, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo( 9 - ls*8, 0); ctx.stroke();
+
+    // Torso — shifted up
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(0, -34, 9, 15, 0, 0, Math.PI*2); ctx.fill();
+
+    // Arms
+    const as = Math.sin(child.legPhase * 1.2 + 0.5) * 0.4;
+    ctx.strokeStyle = col; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-5, -40); ctx.lineTo(-18 - as*8, -28 + as*4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( 5, -40); ctx.lineTo( 18 + as*8, -28 - as*4); ctx.stroke();
+
+    // Head
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(0, -53, 11, 0, Math.PI*2); ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-3.5, -54, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 3.5, -54, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(-3.5, -54, 1.2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 3.5, -54, 1.2, 0, Math.PI*2); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawImpactFlash(child) {
+  if (!child.impacted || child.flashAlpha <= 0) return;
+  const sev = getSev(child.impactV);
+  const idx = CHILDREN_INIT.findIndex(c => c.color === child.color);
+  ctx.save();
+  ctx.globalAlpha = child.flashAlpha * 0.7;
+  ctx.fillStyle = sev.col;
+  ctx.beginPath();
+  ctx.arc(INT_LEFT + 20 + idx * 22, FLOOR_Y - 36, 30 * child.flashAlpha, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawScene() {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+  drawBus();        // exterior first
+  drawInterior();   // then interior layer (seats, ceiling, floor strip)
+  // Clip children to interior of bus so they can't bleed through the walls
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(INT_LEFT, CEIL_Y, INT_RIGHT - INT_LEFT, FLOOR_Y - CEIL_Y + 6);
+  ctx.clip();
+  children.forEach(c => drawImpactFlash(c));
+  children.forEach(c => drawChild(c));
+  ctx.restore();
+}
+
+// ── Animation ──────────────────────────────────────────────────────────────
+function animate(ts) {
+  if (!brakeStart) brakeStart = ts;
+  const elapsed = (ts - brakeStart) / 1000;
+  const ra = A_BUS - MU*G;
+  const ts_stop = busV0 / A_BUS;
+
+  children.forEach((c, i) => {
+    if (c.impacted) {
+      if (c.flashAlpha > 0) c.flashAlpha = Math.max(0, c.flashAlpha - 0.012);
+      return;
+    }
+    let relDist;
+    if (elapsed <= ts_stop) {
+      relDist = 0.5 * ra * elapsed * elapsed;
+    } else {
+      const s1 = 0.5 * ra * ts_stop * ts_stop;
+      const vc = Math.max(0, busV0 - MU*G*ts_stop);
+      const dt = elapsed - ts_stop;
+      relDist = s1 + Math.max(0, vc*dt - 0.5*MU*G*dt*dt);
+    }
+    // If the bus has fully stopped and this child hasn't reached the front,
+    // freeze it — it won't travel any further.
+    if (elapsed > ts_stop + 0.5) {
+      // Child has stopped sliding; lock position
+      c.impacted  = true;
+      c.impactV   = 0;   // no impact — didn't reach front
+      c.flashAlpha = 0;
+      c.tumble    = Math.min(30, relDist * 8); // slight lean but stays standing
+      c.legPhase  = 0;   // freeze pose
+      // Show badge for non-impacting children too
+      const idx2 = CHILDREN_INIT.findIndex(ch => ch.color === c.color);
+      showBadgeNoImpact(idx2, c, relDist);
+      return;
+    }
+    const newDist = c.dist - relDist;
+    if (newDist <= 0) {
+      c.impacted  = true;
+      c.impactV   = impactSpeed(busV0, c.dist);
+      c.flashAlpha = 1.0;
+      showBadge(i, c);
+    } else {
+      c.distNow = newDist;
+      c.x = aisleDistToPx(newDist);
+      // y always FLOOR_Y (drawChild translates there directly)
+      // Head-first pitch: rotate forward (negative = head toward front of bus)
+      // Rotation anchored at feet (bottom of figure), so head swings toward dashboard
+      c.tumble  = -Math.min(80, relDist * 28);
+      if (!c.impacted) c.legPhase = elapsed * 9;  // stop advancing once impacted
+    }
+  });
+
+  const done = children.every(c => c.impacted);
+  if (done) {
+    animState = 'done';
+    stopScreech();
+    const bb = document.getElementById('btn-brake');
+    bb.disabled = false;
+    bb.textContent = '▶ Replay';
+    updateLabel();
+  }
+  drawScene();
+  if (animState === 'braking') raf = requestAnimationFrame(animate);
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────
+function showBadge(i, child) {
+  const sev = getSev(child.impactV);
+  const badges = document.getElementById('impact-row').querySelectorAll('.impact-badge');
+  if (!badges[i]) return;
+  const vi_str = unit === UNITS.imperial
+    ? (child.impactV * 2.237).toFixed(1) + ' mph'
+    : child.impactV.toFixed(1) + ' m/s';
+  badges[i].textContent = `${child.lbl}: ${sev.lbl} (${vi_str})`;
+  badges[i].style.background = sev.col;
+  badges[i].style.color = '#fff';
+  badges[i].classList.add('show');
+}
+
+function showBadgeNoImpact(i, child, relDist) {
+  const badges = document.getElementById('impact-row').querySelectorAll('.impact-badge');
+  if (!badges[i]) return;
+  const slideStr = unit === UNITS.imperial
+    ? (relDist * 3.281).toFixed(1) + ' ft'
+    : relDist.toFixed(1) + ' m';
+  badges[i].textContent = `${child.lbl}: Slid ${slideStr} — no impact`;
+  badges[i].style.background = '#3a5a7a';
+  badges[i].style.color = '#fff';
+  badges[i].classList.add('show');
+}
+
+function updateLabel() {
+  const el = document.getElementById('scn-label');
+  const disp = unit === UNITS.imperial
+    ? `${Math.round(busV0 * 3600 / 1609.34)} mph`
+    : `${Math.round(busV0 * 3.6)} km/h`;
+  if (animState === 'idle')    el.textContent = `${disp} — Press Emergency Stop`;
+  if (animState === 'braking') el.textContent = `Braking from ${disp}…`;
+  if (animState === 'done')    el.textContent = `${disp} stop — see impact below`;
+}
+
+function updateNote() {
+  const aStr = unit === UNITS.imperial ? '16.4 ft/s²' : '5 m/s²';
+  const dStr = unit === UNITS.imperial ? '27 ft' : '8.2 m';
+  document.getElementById('note-text').innerHTML =
+    `Bus deceleration ${aStr} · Floor friction µ = 0.2 · Aisle length ${dStr}<br>
+     Impact speed is the child's speed relative to the front wall at the moment of contact.`;
+}
+
+function rebuildSpeedButtons() {
+  const row = document.getElementById('speed-row');
+  row.innerHTML = '';
+  unit.speeds.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'spd-btn' + (v === unit.def ? ' active' : '');
+    b.dataset.v = v;
+    b.textContent = unit === UNITS.imperial ? `${v} mph` : `${v} km/h`;
+    row.appendChild(b);
+  });
+  busV0 = unit.toMS(unit.def);
+}
+
+function doReset() {
+  if (raf) { cancelAnimationFrame(raf); raf = null; }
+  stopScreech();
+  animState = 'idle'; brakeStart = null;
+  initChildren();
+  document.getElementById('impact-row').querySelectorAll('.impact-badge').forEach(b => b.classList.remove('show'));
+  const bb = document.getElementById('btn-brake');
+  bb.disabled = false;
+  bb.textContent = '⚠ Emergency Stop';
+  updateLabel(); drawScene();
+}
+
+function doBrake() {
+  if (animState === 'braking') return;
+  if (animState === 'done') doReset();
+  animState = 'braking'; brakeStart = null;
+  const bb = document.getElementById('btn-brake');
+  bb.disabled = true; bb.textContent = 'Braking…';
+  updateLabel();
+  raf = requestAnimationFrame(animate);
+}
+
+// Events
+document.getElementById('speed-row').addEventListener('click', e => {
+  const btn = e.target.closest('.spd-btn'); if (!btn) return;
+  document.querySelectorAll('.spd-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  busV0 = unit.toMS(parseFloat(btn.dataset.v));
+  doReset();
+});
+document.getElementById('btn-brake').addEventListener('click', doBrake);
+document.getElementById('btn-reset').addEventListener('click', doReset);
+
+document.getElementById('unit-metric').addEventListener('click', () => {
+  unit = UNITS.metric;
+  document.getElementById('unit-metric').classList.add('active');
+  document.getElementById('unit-imperial').classList.remove('active');
+  rebuildSpeedButtons(); updateNote(); doReset();
+});
+document.getElementById('unit-imperial').addEventListener('click', () => {
+  unit = UNITS.imperial;
+  document.getElementById('unit-imperial').classList.add('active');
+  document.getElementById('unit-metric').classList.remove('active');
+  rebuildSpeedButtons(); updateNote(); doReset();
+});
+
+// Build impact badge placeholders
+const impactRow = document.getElementById('impact-row');
+CHILDREN_INIT.forEach((_, i) => {
+  const b = document.createElement('div');
+  b.className = 'impact-badge'; b.id = `badge-${i}`;
+  impactRow.appendChild(b);
+});
+
+// Build legend
+const legend = document.getElementById('legend');
+[...SEV].reverse().forEach(s => {
+  const d = document.createElement('div'); d.className = 'leg-item';
+  d.innerHTML = `<div class="leg-dot" style="background:${s.col}"></div><span>${s.lbl}</span>`;
+  legend.appendChild(d);
+});
+
+// Boot
+rebuildSpeedButtons(); updateNote(); initChildren(); updateLabel(); drawScene();
+</script>
+
+</body></html>
