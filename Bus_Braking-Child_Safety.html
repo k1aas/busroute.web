@@ -146,10 +146,19 @@ canvas#scene { display: block; width: 100%; height: auto; }
 // ── Physics ────────────────────────────────────────────────────────────────
 const A_BUS = 5, MU = 0.2, G = 9.80665, AISLE = 8.2;
 
+// Severity thresholds based on head deceleration into a hard dashboard (~5 mm stopping dist).
+// At impact speed v: peak decel = v²/(2×0.005). Child injury thresholds:
+//   ≥4.17 m/s (15 km/h) → ≥175 g → Fatal
+//   2.78–4.17 m/s (10–15 km/h) → 110–175 g → Life-altering
+//   1.67–2.78 m/s (6–10 km/h)  → 40–110 g  → Severe
+//   0.83–1.67 m/s (3–6 km/h)   → 10–40 g   → Mild
+//   <0.83 m/s (<3 km/h)        → <10 g     → Minor
 const SEV = [
-  { min: 4, lbl:'Severe', col:'#C44E00' },
-  { min: 2, lbl:'Mild',   col:'#8a7200' },
-  { min: 0, lbl:'Minor',  col:'#1B6E20' },
+  { min: 4.17, lbl:'Fatal',         col:'#7a0000', g:'>175 g' },
+  { min: 2.78, lbl:'Life-altering', col:'#C44E00', g:'110–175 g' },
+  { min: 1.67, lbl:'Severe',        col:'#b58800', g:'40–110 g' },
+  { min: 0.83, lbl:'Mild',          col:'#3a5a7a', g:'10–40 g' },
+  { min: 0,    lbl:'Minor',         col:'#1B6E20', g:'<10 g' },
 ];
 function getSev(vi) { return SEV.find(s => vi >= s.min) || SEV[SEV.length-1]; }
 
@@ -762,7 +771,7 @@ CHILDREN_INIT.forEach((_, i) => {
 const legend = document.getElementById('legend');
 [...SEV].reverse().forEach(s => {
   const d = document.createElement('div'); d.className = 'leg-item';
-  d.innerHTML = `<div class="leg-dot" style="background:${s.col}"></div><span>${s.lbl}</span>`;
+  d.innerHTML = `<div class="leg-dot" style="background:${s.col}"></div><span>${s.lbl} <span style="opacity:.65;font-weight:400">(${s.g})</span></span>`;
   legend.appendChild(d);
 });
 
