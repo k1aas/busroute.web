@@ -144,20 +144,21 @@ canvas#scene { display: block; width: 100%; height: auto; }
 
 <script>
 // ── Physics ────────────────────────────────────────────────────────────────
-const A_BUS = 5, MU = 0.2, G = 9.80665, AISLE = 8.2;
+const A_BUS = 5, MU = 0.4, G = 9.80665, AISLE = 8.2;
 
-// Severity thresholds based on head deceleration into a hard dashboard (~5 mm stopping dist).
-// At impact speed v: peak decel = v²/(2×0.005). Child injury thresholds:
-//   ≥4.17 m/s (15 km/h) → ≥175 g → Fatal
-//   2.78–4.17 m/s (10–15 km/h) → 110–175 g → Life-altering
-//   1.67–2.78 m/s (6–10 km/h)  → 40–110 g  → Severe
-//   0.83–1.67 m/s (3–6 km/h)   → 10–40 g   → Mild
-//   <0.83 m/s (<3 km/h)        → <10 g     → Minor
+// Severity thresholds based on head deceleration into a thin vinyl-over-hard-plastic dashboard (~10 mm stopping dist).
+// At impact speed v: peak decel = v²/(2×0.010×G). Child injury thresholds:
+//   ≥5.85 m/s (21.1 km/h) → ≥175 g → Fatal
+//   4.64–5.85 m/s (16.7–21.1 km/h) → 110–175 g → Life-altering
+//   2.80–4.64 m/s (10.1–16.7 km/h) → 40–110 g  → Severe
+//   1.40–2.80 m/s (5.0–10.1 km/h)  → 10–40 g   → Mild
+//   <1.40 m/s (<5.0 km/h)          → <10 g     → Minor
+// Note: thresholds are conservative for younger children (KG-age) whose skulls are not yet fully ossified.
 const SEV = [
-  { min: 4.17, lbl:'Fatal',         col:'#cc0000', g:'>175 g' },
-  { min: 2.78, lbl:'Life-altering', col:'#C44E00', g:'110–175 g' },
-  { min: 1.67, lbl:'Severe',        col:'#d4a017', g:'40–110 g' },
-  { min: 0.83, lbl:'Mild',          col:'#5b8db8', g:'10–40 g' },
+  { min: 5.85, lbl:'Fatal',         col:'#cc0000', g:'>175 g', hidden: true },
+  { min: 4.64, lbl:'Life-altering', col:'#C44E00', g:'110–175 g', hidden: true },
+  { min: 2.80, lbl:'Severe',        col:'#d4a017', g:'40–110 g' },
+  { min: 1.40, lbl:'Mild',          col:'#5b8db8', g:'10–40 g' },
   { min: 0,    lbl:'Minor',         col:'#2e9e3a', g:'<10 g' },
 ];
 function getSev(vi) { return SEV.find(s => vi >= s.min) || SEV[SEV.length-1]; }
@@ -696,8 +697,10 @@ function updateNote() {
   const aStr = unit === UNITS.imperial ? '16.4 ft/s²' : '5 m/s²';
   const dStr = unit === UNITS.imperial ? '27 ft' : '8.2 m';
   document.getElementById('note-text').innerHTML =
-    `Bus deceleration ${aStr} · Floor friction µ = 0.2 · Aisle length ${dStr}<br>
-     Impact speed is the child's speed relative to the front wall at the moment of contact.`;
+    `Bus deceleration ${aStr} · Floor friction µ = 0.4 · Aisle length ${dStr}<br>
+     Impact speed is the child's speed relative to the front wall at the moment of contact.<br>
+     G-force estimates assume a thin vinyl-padded dashboard (10 mm deformation). Hard plastic or metal dashes will be significantly worse.<br>
+     Younger children (kindergarten age) face higher risk — their skulls are not yet fully ossified.`;
 }
 
 function rebuildSpeedButtons() {
@@ -769,7 +772,7 @@ CHILDREN_INIT.forEach((_, i) => {
 
 // Build legend
 const legend = document.getElementById('legend');
-[...SEV].reverse().forEach(s => {
+[...SEV].reverse().filter(s => !s.hidden).forEach(s => {
   const d = document.createElement('div'); d.className = 'leg-item';
   d.innerHTML = `<div class="leg-dot" style="background:${s.col}"></div><span>${s.lbl} <span style="opacity:.65;font-weight:400">(${s.g})</span></span>`;
   legend.appendChild(d);
