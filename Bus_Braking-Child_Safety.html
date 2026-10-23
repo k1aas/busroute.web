@@ -154,6 +154,10 @@ const SEV = [
 function getSev(vi) { return SEV.find(s => vi >= s.min) || SEV[SEV.length-1]; }
 
 function impactSpeed(v0, dist) {
+  // Returns the child's speed relative to the bus/wall at impact.
+  // In the bus frame the child accelerates forward at ra = A_BUS - MU*G.
+  // Starting from rest in bus frame: v_rel = sqrt(2*ra*dist) if bus still
+  // braking at impact; after bus stops the child's absolute speed is used.
   if (dist <= 0) return 0;
   const mug = MU*G, ra = A_BUS - mug;
   if (ra <= 0) return 0;
@@ -649,8 +653,8 @@ function showBadge(i, child) {
   const badges = document.getElementById('impact-row').querySelectorAll('.impact-badge');
   if (!badges[i]) return;
   const vi_str = unit === UNITS.imperial
-    ? (child.impactV * 2.237).toFixed(1) + ' mph'
-    : child.impactV.toFixed(1) + ' m/s';
+    ? Math.round(child.impactV * 2.237) + ' mph'
+    : Math.round(child.impactV * 3.6) + ' km/h';
   badges[i].textContent = `${child.lbl}: ${sev.lbl} (${vi_str})`;
   badges[i].style.background = sev.col;
   badges[i].style.color = '#fff';
