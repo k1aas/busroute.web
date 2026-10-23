@@ -154,11 +154,11 @@ const A_BUS = 5, MU = 0.2, G = 9.80665, AISLE = 8.2;
 //   0.83–1.67 m/s (3–6 km/h)   → 10–40 g   → Mild
 //   <0.83 m/s (<3 km/h)        → <10 g     → Minor
 const SEV = [
-  { min: 4.17, lbl:'Fatal',         col:'#7a0000', g:'>175 g' },
+  { min: 4.17, lbl:'Fatal',         col:'#cc0000', g:'>175 g' },
   { min: 2.78, lbl:'Life-altering', col:'#C44E00', g:'110–175 g' },
-  { min: 1.67, lbl:'Severe',        col:'#b58800', g:'40–110 g' },
-  { min: 0.83, lbl:'Mild',          col:'#3a5a7a', g:'10–40 g' },
-  { min: 0,    lbl:'Minor',         col:'#1B6E20', g:'<10 g' },
+  { min: 1.67, lbl:'Severe',        col:'#d4a017', g:'40–110 g' },
+  { min: 0.83, lbl:'Mild',          col:'#5b8db8', g:'10–40 g' },
+  { min: 0,    lbl:'Minor',         col:'#2e9e3a', g:'<10 g' },
 ];
 function getSev(vi) { return SEV.find(s => vi >= s.min) || SEV[SEV.length-1]; }
 
