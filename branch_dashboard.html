@@ -3,9 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BusRoute — Route Dashboard</title>
+<title>BusRoute — Dashboard</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!--
+  One page, two uses (2026-11-22, per-driver keys stage 3):
+  - with ?token=...  : head office view, read-only, all branches of the company
+  - without a token  : branch manager sign-in, then that branch's keys
+                       (employee number per key, reset, switch off / on)
+-->
 <style>
   :root {
     --bg:      #111418;
@@ -29,20 +35,21 @@
       --text:    #1a1a2e;
       --mid:     #555555;
     }
-    .top-bar { background: #1a3a5c; }
-    #act-map .leaflet-tile { filter: none; }
+    .top-bar { background: #1a3a5c !important; }
+    .top-bar .company, .top-bar .mid { color: #fff !important; }
+    .map-box .leaflet-tile { filter: none !important; }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
 
-  .top-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 14px; height: 52px; }
+  .top-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 14px; min-height: 52px; flex-wrap: wrap; }
   .top-bar .logo { font-weight: 700; font-size: 16px; color: var(--green); }
   .top-bar .company { font-size: 14px; color: var(--text); font-weight: 600; }
   .top-bar .badge { font-size: 11px; color: var(--mid); background: var(--card); border-radius: 4px; padding: 2px 8px; }
   .top-bar .spacer { flex: 1; }
 
   /* Tab nav */
-  .tab-nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 0; }
+  .tab-nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 0; flex-wrap: wrap; }
   .tab-btn { padding: 13px 20px; font-size: 13px; font-weight: 600; color: var(--mid); background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: color .15s, border-color .15s; white-space: nowrap; }
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
@@ -57,42 +64,72 @@
   .stat-card .num { font-size: 28px; font-weight: 700; color: var(--green); line-height: 1; }
   .stat-card .num.warn { color: var(--amber); }
   .stat-card .num.bad  { color: var(--red); }
+  .stat-card .num.dim  { color: var(--mid); }
   .stat-card .lbl { font-size: 11px; color: var(--mid); margin-top: 4px; }
 
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
   .card-title { font-size: 12px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+  .hint { color: var(--mid); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
 
+  .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
   td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(255,255,255,.02); }
+  tr.clickable { cursor: pointer; }
+  tr.selected td { background: rgba(46,204,113,.08); }
 
   .mono { font-family: var(--mono); font-size: 12px; color: var(--green); }
   .mid  { color: var(--mid); }
 
-  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; }
   .badge-ok   { background: rgba(46,204,113,.15); color: var(--green); }
   .badge-warn { background: rgba(240,165,0,.15); color: var(--amber); }
   .badge-err  { background: rgba(231,76,60,.15); color: var(--red); }
   .badge-blk  { background: rgba(150,150,150,.15); color: #888; }
 
-  /* Activation map — dark filter to match the dashboard theme */
-  #act-map { height: 340px; border-radius: 8px; border: 1px solid var(--border); margin-top: 14px; }
-  #act-map .leaflet-tile { filter: brightness(.7) saturate(.8); }
+  .map-box { height: 360px; border-radius: 8px; border: 1px solid var(--border); margin-top: 14px; }
+  .map-box .leaflet-tile { filter: brightness(.7) saturate(.8); }
 
   #loading { display: flex; align-items: center; justify-content: center; min-height: 80vh; color: var(--mid); font-size: 15px; }
-  #error-screen { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+  #error-screen { display: none; align-items: center; justify-content: center; min-height: 80vh; }
   .error-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 40px; max-width: 400px; text-align: center; }
   .error-card h2 { color: var(--red); margin-bottom: 10px; }
   .error-card p { color: var(--mid); font-size: 13px; }
 
+  /* Sign-in */
+  #login-screen { display: none; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+  .login-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 36px; width: 100%; max-width: 380px; }
+  .login-card h1 { font-size: 22px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+  .login-card p { color: var(--mid); margin-bottom: 22px; font-size: 13px; }
+  .login-card label { display: block; font-size: 11px; color: var(--mid); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 4px; }
+  input[type=text], input[type=password], select {
+    width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 9px 12px; font-size: 14px; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--green); }
+  .error-msg { color: var(--red); font-size: 12px; margin-top: 10px; min-height: 16px; }
+  .success-msg { color: var(--green); font-size: 12px; margin-top: 8px; }
+
   #app { display: none; }
 
-  .seats-bar { background: var(--border); border-radius: 3px; height: 6px; margin-top: 6px; overflow: hidden; }
-  .seats-fill { background: var(--green); height: 100%; border-radius: 3px; transition: width .3s; }
-  .seats-fill.warn { background: var(--amber); }
-  .seats-fill.full { background: var(--red); }
+  .btn { cursor: pointer; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; padding: 10px 18px; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn-green { background: var(--green); color: #000; width: 100%; margin-top: 18px; padding: 12px; }
+  .btn-sm { background: var(--green-dk); color: #fff; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: opacity .15s; }
+  .btn-sm:hover { opacity: .85; }
+  .btn-red-sm { background: var(--red); color: #fff; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: opacity .15s; }
+  .btn-amber-sm { background: var(--amber); color: #000; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+  .btn-ghost { background: transparent; color: var(--mid); border: 1px solid var(--border); padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; }
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn-row button { font-size: 11px; padding: 4px 10px; }
+  .filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; align-items: flex-end; }
+  .filters > div { display: flex; flex-direction: column; gap: 4px; }
+  .filters label { font-size: 11px; color: var(--mid); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .filters input, .filters select { min-width: 200px; font-size: 13px; padding: 7px 10px; }
+  input.label-input { width: 130px; font-size: 13px; padding: 5px 8px; font-family: var(--mono); }
+  input.label-input.saved { border-color: var(--green); }
 
   /* ══ Route Files section ═══════════════════════════════════════════ */
   #route-dropzone {
@@ -112,12 +149,6 @@
     color: var(--text);
   }
   #route-dropzone svg { display: block; margin: 0 auto 10px; }
-
-  .btn { cursor: pointer; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; padding: 10px 18px; transition: opacity .15s; }
-  .btn:hover { opacity: .85; }
-  .btn-sm { background: var(--green-dk); color: #fff; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: opacity .15s; }
-  .btn-sm:hover { opacity: .85; }
-  .btn-red-sm { background: var(--red); color: #fff; padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: opacity .15s; }
 
   .route-file-row { cursor: pointer; }
   .route-file-row.selected td { background: rgba(46,204,113,.06); }
@@ -185,11 +216,25 @@
 </head>
 <body>
 
-<div id="loading">Loading route data…</div>
-<div id="error-screen" style="display:none">
+<div id="loading">Loading…</div>
+<div id="error-screen">
   <div class="error-card">
     <h2>Dashboard not found</h2>
     <p>This link may be invalid or expired. Contact your BusRoute administrator.</p>
+  </div>
+</div>
+
+<!-- Branch manager sign-in (no token in the link) -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>BusRoute</h1>
+    <p>Branch office sign-in</p>
+    <label for="lg-user">Username</label>
+    <input type="text" id="lg-user" autocomplete="username" autocapitalize="none" onkeydown="if(event.key==='Enter')document.getElementById('lg-pass').focus()"/>
+    <label for="lg-pass">Password</label>
+    <input type="password" id="lg-pass" autocomplete="current-password" onkeydown="if(event.key==='Enter')signIn()"/>
+    <div id="login-error" class="error-msg"></div>
+    <button class="btn btn-green" id="lg-btn" onclick="signIn()">Sign in</button>
   </div>
 </div>
 
@@ -197,9 +242,11 @@
   <div class="top-bar">
     <span class="logo">BusRoute</span>
     <span class="company" id="co-name"></span>
-    <span class="badge" id="co-badge">Read-only</span>
+    <span class="badge" id="co-badge"></span>
     <span class="spacer"></span>
     <span class="mid" id="last-updated" style="font-size:12px"></span>
+    <button class="btn-sm" id="refresh-btn" onclick="refreshAll()">↻ Refresh</button>
+    <button class="btn-sm" id="signout-btn" style="display:none" onclick="signOut()">Sign out</button>
   </div>
 
   <nav class="tab-nav">
@@ -212,25 +259,61 @@
     <div class="content">
       <div class="stats-row" id="stats-row"></div>
 
+      <!-- Head office: branches -->
+      <div class="card" id="hq-branches-card" style="display:none">
+        <div class="card-title">Branches</div>
+        <p class="hint">Click a branch to show only its keys and activations. Click it again for all branches.</p>
+        <div class="table-wrap">
+        <table id="branches-table">
+          <thead><tr><th>Branch</th><th>Keys</th><th>In use</th><th>Free</th><th>Switched off</th><th>Last activation</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </div>
+
+      <!-- Keys (both views) -->
       <div class="card">
-        <div class="card-title">License keys</div>
+        <div class="card-title" id="keys-title">License keys</div>
+        <p class="hint" id="keys-hint" style="display:none">
+          Hand out one key per driver and type the driver's employee number next to it (saved when you leave the field or press Enter).
+          <b>Reset</b> frees a key from its phone (new phone, app reinstalled): the driver enters the key again.
+          <b>Switch off</b> stops a key (driver left, phone lost): the phone is stopped at its next app start.
+        </p>
+        <div class="filters">
+          <div id="hq-branch-filter-wrap" style="display:none"><label>Branch</label><select id="hq-branch-filter" onchange="selectBranch(this.value)"></select></div>
+          <div><label>Search key or employee no.</label><input type="text" id="key-search" oninput="renderKeys()"/></div>
+          <div><label>Show</label>
+            <select id="key-show" onchange="renderKeys()">
+              <option value="">All keys</option>
+              <option value="free">Free</option>
+              <option value="handed">Handed out, not yet used</option>
+              <option value="inuse">In use</option>
+              <option value="off">Switched off</option>
+            </select>
+          </div>
+        </div>
+        <div id="keys-msg"></div>
+        <div class="table-wrap">
         <table id="keys-table">
-          <thead><tr><th>Key</th><th>Max devices</th><th>Active</th><th>Seats used</th><th>Expires</th><th>Status</th></tr></thead>
+          <thead id="keys-head"></thead>
           <tbody></tbody>
         </table>
+        </div>
       </div>
 
       <div class="card">
-        <div class="card-title">Activation map</div>
-        <div id="act-map"></div>
+        <div class="card-title" id="map-title">Activation map</div>
+        <div id="act-map" class="map-box"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="act-card">
         <div class="card-title">Recent activations</div>
+        <div class="table-wrap">
         <table id="act-table">
-          <thead><tr><th>When</th><th>Key</th><th>Status</th><th>Location (approx.)</th></tr></thead>
+          <thead><tr><th>When</th><th>Key</th><th id="act-branch-th">Branch</th><th>Status</th><th>Location (approx.)</th></tr></thead>
           <tbody></tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
@@ -300,130 +383,423 @@
 </div><!-- /app -->
 
 <script>
-// ── Tab switching ───────────────────────────────────────────────────
+// ── Setup ───────────────────────────────────────────────────────────
+const API_BASE = "https://osrm.busroute.app";
+const params   = new URLSearchParams(location.search);
+const token    = params.get("token");
+const MODE     = token ? "hq" : "branch";   // hq = read-only head office link
+const SESSION_KEY = "busroute_branch_session";
+
+let session = null;       // branch: { token, username, branch, company }
+let keysData = [];
+let actsData = [];        // hq only
+let branchesData = [];    // hq only
+let selectedBranch = "";  // hq: "" = all, "none" = no branch, else id
+let actMap = null, actLayer = null, mapFitted = false;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const when = s => s ? String(s).slice(0,16).replace("T"," ") : "—";
+const today = () => new Date().toISOString().slice(0,10);
+const loc = (lat, lng) => (lat && lng) ? `${(+lat).toFixed(1)}°N  ${Math.abs(+lng).toFixed(1)}°W` : "—";
+
+function storeGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+function storeSet(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+
+function show(id, how) { $(id).style.display = how || "block"; }
+function hide(id) { $(id).style.display = "none"; }
+
+// ── Tabs ────────────────────────────────────────────────────────────
 function switchTab(name, btn) {
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("tab-" + name).classList.add("active");
+  $("tab-" + name).classList.add("active");
   btn.classList.add("active");
   if (name === "routes" && rfMap) setTimeout(() => rfMap.invalidateSize(), 80);
+  if (name === "overview" && actMap) setTimeout(() => actMap.invalidateSize(), 80);
 }
 
-// ── Dashboard load ──────────────────────────────────────────────────
-const params   = new URLSearchParams(location.search);
-const token    = params.get("token");
-const API_BASE = "https://osrm.busroute.app";
+// ── Start ───────────────────────────────────────────────────────────
+async function start() {
+  if (MODE === "hq") {
+    const ok = await loadHq();
+    hide("loading");
+    if (!ok) { show("error-screen", "flex"); return; }
+    openApp();
+    return;
+  }
+  // Branch manager: reuse the sign-in of this browser tab if it is still valid
+  const saved = storeGet(SESSION_KEY);
+  if (saved) {
+    try { session = JSON.parse(saved); } catch (e) { session = null; }
+    if (session && await loadBranch()) { hide("loading"); openApp(); return; }
+  }
+  hide("loading");
+  showLogin("");
+}
 
-async function load() {
-  if (!token) { showError(); return; }
+function openApp() {
+  hide("login-screen");
+  show("app");
+  rfInitDropzone();
+  if (MODE === "branch") {
+    $("co-badge").textContent = session.username;
+    show("signout-btn", "inline-block");
+    show("keys-hint");
+    hide("act-card");   // the branch keys table already shows each key's phone
+    $("map-title").textContent = "Activation map — this branch";
+  } else {
+    $("co-badge").textContent = "Read-only";
+  }
+  renderAll();
+}
+
+function showLogin(msg) {
+  hide("app");
+  show("login-screen", "flex");
+  $("login-error").textContent = msg || "";
+  setTimeout(() => $("lg-user").focus(), 50);
+}
+
+// ── Branch manager sign-in ──────────────────────────────────────────
+async function signIn() {
+  const username = $("lg-user").value.trim().toLowerCase();
+  const password = $("lg-pass").value;
+  if (!username || !password) { $("login-error").textContent = "Enter your username and password."; return; }
+  const btn = $("lg-btn"); btn.disabled = true; btn.textContent = "Signing in…";
   try {
-    const r = await fetch(`${API_BASE}/api/dashboard/${token}`);
-    if (!r.ok) { showError(); return; }
-    const data = await r.json();
-    render(data);
-  } catch(e) {
-    showError();
+    const r = await fetch(API_BASE + "/api/branch/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    let data = {}; try { data = await r.json(); } catch (e) {}
+    if (!r.ok) { $("login-error").textContent = data.error || "Sign-in failed."; return; }
+    session = { token: data.token, username: data.username, branch: data.branch, company: data.company };
+    storeSet(SESSION_KEY, JSON.stringify(session));
+    $("lg-pass").value = "";
+    if (await loadBranch()) openApp();
+    else showLogin("Signed in, but the keys could not be loaded. Try again.");
+  } catch (e) {
+    $("login-error").textContent = "Cannot reach the server. Check your internet connection.";
+  } finally {
+    btn.disabled = false; btn.textContent = "Sign in";
   }
 }
 
-function showError() {
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("error-screen").style.display = "flex";
+async function signOut() {
+  try {
+    await fetch(API_BASE + "/api/branch/logout", { method: "POST", headers: { "X-Session": session?.token || "" } });
+  } catch (e) {}
+  session = null;
+  storeSet(SESSION_KEY, null);
+  keysData = [];
+  showLogin("Signed out.");
 }
 
-function render(data) {
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("app").style.display = "block";
-  document.getElementById("co-name").textContent = data.company;
-  document.getElementById("last-updated").textContent = "Updated " + new Date().toLocaleTimeString();
-  document.title = `BusRoute — ${data.company}`;
-
-  const acts  = data.activations || [];
-  const keys  = data.keys || [];
-  const today = new Date().toISOString().slice(0,10);
-
-  const activeCount = {};
-  acts.filter(a => a.status === "active").forEach(a => {
-    activeCount[a.license_key] = (activeCount[a.license_key] || 0) + 1;
+async function branchFetch(path, opts = {}) {
+  const r = await fetch(API_BASE + path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", "X-Session": session?.token || "", ...(opts.headers || {}) }
   });
-  const overLimit = acts.filter(a => a.status === "over_limit").length;
+  if (r.status === 401) {
+    session = null; storeSet(SESSION_KEY, null);
+    showLogin("Your sign-in has ended. Please sign in again.");
+    throw new Error("signed-out");
+  }
+  return r;
+}
 
-  const totalSeats  = keys.reduce((s, k) => s + k.max_devices, 0);
-  const totalActive = Object.values(activeCount).reduce((s, n) => s + n, 0);
-  const expiredKeys = keys.filter(k => k.expires_on < today).length;
+// ── Loading ─────────────────────────────────────────────────────────
+async function loadHq() {
+  try {
+    const r = await fetch(`${API_BASE}/api/dashboard/${encodeURIComponent(token)}`);
+    if (!r.ok) return false;
+    const data = await r.json();
+    $("co-name").textContent = data.company;
+    document.title = `BusRoute — ${data.company}`;
+    keysData = data.keys || [];
+    actsData = data.activations || [];
+    branchesData = data.branches || [];
+    // Phones in use per key, from the activations
+    const count = {}, first = {};
+    actsData.forEach(a => {
+      if (a.status !== "active") return;
+      count[a.license_key] = (count[a.license_key] || 0) + 1;
+      if (!first[a.license_key]) first[a.license_key] = a;   // newest first from the server
+    });
+    keysData.forEach(k => {
+      k.active = count[k.key] || 0;
+      k.activated_on = first[k.key]?.activated_on || null;
+      k.lat_grid = first[k.key]?.lat_grid ?? null;
+      k.lng_grid = first[k.key]?.lng_grid ?? null;
+    });
+    return true;
+  } catch (e) { return false; }
+}
 
-  document.getElementById("stats-row").innerHTML = `
-    <div class="stat-card"><div class="num">${keys.length}</div><div class="lbl">License key${keys.length!==1?'s':''}</div></div>
-    <div class="stat-card"><div class="num">${totalActive}</div><div class="lbl">Active devices</div></div>
-    <div class="stat-card"><div class="num">${totalSeats}</div><div class="lbl">Total seats</div></div>
-    <div class="stat-card"><div class="num ${overLimit>0?'bad':''}"> ${overLimit}</div><div class="lbl">Over-limit attempts</div></div>
-    ${expiredKeys > 0 ? `<div class="stat-card"><div class="num warn">${expiredKeys}</div><div class="lbl">Expired keys</div></div>` : ''}
-  `;
+async function loadBranch() {
+  try {
+    const r = await branchFetch("/api/branch/keys");
+    if (!r.ok) return false;
+    const data = await r.json();
+    $("co-name").textContent = `${data.company} · ${data.branch}`;
+    document.title = `BusRoute — ${data.branch}`;
+    keysData = data.keys || [];
+    return true;
+  } catch (e) { return false; }
+}
 
-  const ktbody = document.querySelector("#keys-table tbody");
-  ktbody.innerHTML = keys.map(k => {
-    const active  = activeCount[k.key] || 0;
-    const pct     = Math.round(active / k.max_devices * 100);
-    const expired = k.expires_on < today;
-    const full    = active >= k.max_devices;
-    const fillCls = full ? "full" : pct > 75 ? "warn" : "";
-    const badge   = expired ? '<span class="badge badge-err">Expired</span>'
-                  : full    ? '<span class="badge badge-warn">Full</span>'
-                  :           '<span class="badge badge-ok">Active</span>';
+async function refreshAll() {
+  const btn = $("refresh-btn"); btn.disabled = true; btn.textContent = "Loading…";
+  try {
+    const ok = MODE === "hq" ? await loadHq() : await loadBranch();
+    if (ok) renderAll();
+  } finally { btn.disabled = false; btn.textContent = "↻ Refresh"; }
+}
+
+// ── Key state ───────────────────────────────────────────────────────
+function keyState(k) {
+  if (k.status === "off") return "off";
+  if (k.expires_on < today()) return "expired";
+  if (k.active > k.max_devices) return "over";
+  if (k.active > 0) return k.active >= k.max_devices && k.max_devices > 1 ? "full" : "inuse";
+  return k.label ? "handed" : "free";
+}
+function stateBadge(st) {
+  return {
+    off:     '<span class="badge badge-blk">Switched off</span>',
+    expired: '<span class="badge badge-err">Expired</span>',
+    over:    '<span class="badge badge-err">Over limit</span>',
+    full:    '<span class="badge badge-warn">Full</span>',
+    inuse:   '<span class="badge badge-ok">In use</span>',
+    handed:  '<span class="badge badge-warn">Handed out</span>',
+    free:    '<span class="badge badge-blk">Free</span>',
+  }[st];
+}
+
+function keysInView() {
+  if (MODE !== "hq" || !selectedBranch) return keysData;
+  return keysData.filter(k => selectedBranch === "none" ? k.branch_id == null : String(k.branch_id) === selectedBranch);
+}
+
+// ── Rendering ───────────────────────────────────────────────────────
+function renderAll() {
+  $("last-updated").textContent = "Updated " + new Date().toLocaleTimeString();
+  if (MODE === "hq") renderBranches();
+  renderStats();
+  renderKeys();
+  renderMap();
+  if (MODE === "hq") renderActs();
+}
+
+function renderStats() {
+  const ks = keysInView();
+  const n = st => ks.filter(k => keyState(k) === st).length;
+  const phones = ks.reduce((s, k) => s + (k.status === "on" ? k.active : 0), 0);
+  let html = "";
+  const card = (num, lbl, cls) => `<div class="stat-card"><div class="num ${cls || ""}">${num}</div><div class="lbl">${lbl}</div></div>`;
+  if (MODE === "branch") {
+    html += card(ks.length, "Keys");
+    html += card(n("inuse") + n("full") + n("over"), "In use");
+    html += card(n("handed"), "Handed out, not yet used", n("handed") ? "warn" : "dim");
+    html += card(n("free"), "Free", "dim");
+    if (n("off")) html += card(n("off"), "Switched off", "dim");
+    if (n("expired")) html += card(n("expired"), "Expired", "bad");
+  } else {
+    const refused = actsData.filter(a => a.status === "over_limit" && (!selectedBranch || matchBranch(a.branch_id))).length;
+    html += card(ks.length, "License keys");
+    html += card(phones, "Phones in use");
+    html += card(n("free") + n("handed"), "Keys not in use", "dim");
+    if (n("off")) html += card(n("off"), "Switched off", "dim");
+    if (refused) html += card(refused, "Refused phones", "bad");
+    if (n("expired")) html += card(n("expired"), "Expired keys", "warn");
+  }
+  $("stats-row").innerHTML = html;
+}
+
+function matchBranch(branchId) {
+  if (!selectedBranch) return true;
+  return selectedBranch === "none" ? branchId == null : String(branchId) === selectedBranch;
+}
+
+function renderBranches() {
+  const card = $("hq-branches-card");
+  if (!branchesData.length) { hide("hq-branches-card"); hide("hq-branch-filter-wrap"); return; }
+  show("hq-branches-card"); show("hq-branch-filter-wrap");
+  const shared = keysData.filter(k => k.branch_id == null);
+  const rows = branchesData.map(b => {
+    const bk = keysData.filter(k => k.branch_id === b.id);
+    const inUse = bk.filter(k => ["inuse","full","over"].includes(keyState(k))).length;
+    const free = bk.filter(k => ["free","handed"].includes(keyState(k))).length;
+    return { id: String(b.id), name: esc(b.name), keys: bk.length, inUse, free, off: b.off, last: when(b.last_activation) };
+  });
+  if (shared.length) {
+    const last = actsData.find(a => a.branch_id == null && a.status === "active");
+    rows.push({ id: "none", name: '<span class="mid">Company-wide keys</span>', keys: shared.length,
+      inUse: shared.filter(k => ["inuse","full","over"].includes(keyState(k))).length,
+      free: shared.filter(k => ["free","handed"].includes(keyState(k))).length,
+      off: shared.filter(k => k.status === "off").length, last: when(last?.activated_on) });
+  }
+  $("branches-table").querySelector("tbody").innerHTML = rows.map(r => `
+    <tr class="clickable ${selectedBranch === r.id ? "selected" : ""}" onclick="selectBranch('${r.id}', true)">
+      <td>${r.name}</td><td>${r.keys}</td><td>${r.inUse}</td><td>${r.free}</td><td>${r.off}</td><td class="mid">${r.last}</td>
+    </tr>`).join("");
+  const sel = $("hq-branch-filter");
+  sel.innerHTML = '<option value="">All branches</option>' +
+    branchesData.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join("") +
+    (shared.length ? '<option value="none">Company-wide keys</option>' : "");
+  sel.value = selectedBranch;
+}
+
+function selectBranch(id, toggle) {
+  selectedBranch = (toggle && selectedBranch === id) ? "" : id;
+  mapFitted = false;
+  renderAll();
+}
+
+function renderKeys() {
+  const search = $("key-search").value.trim().toUpperCase();
+  const showSt = $("key-show").value;
+  const rows = keysInView().filter(k => {
+    const st = keyState(k);
+    if (showSt === "inuse" && !["inuse","full","over"].includes(st)) return false;
+    if (showSt && showSt !== "inuse" && st !== showSt) return false;
+    return !search || k.key.includes(search) || String(k.label || "").toUpperCase().includes(search);
+  });
+  const isHq = MODE === "hq";
+  $("keys-head").innerHTML = isHq
+    ? "<tr><th>Key</th><th>Branch</th><th>Phones</th><th>Status</th><th>Activated</th><th>Area</th><th>Expires</th></tr>"
+    : "<tr><th>Key</th><th>Employee no.</th><th>Status</th><th>Activated</th><th>Last check</th><th>Area</th><th>Expires</th><th>Action</th></tr>";
+  const tbody = $("keys-table").querySelector("tbody");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="mid" style="text-align:center;padding:20px">${keysData.length ? "No keys match" : "No keys yet. BusRoute creates the keys your company orders."}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(k => {
+    const kk = esc(k.key);
+    const st = keyState(k);
+    if (isHq) {
+      return `<tr>
+        <td><span class="mono">${kk}</span></td>
+        <td>${k.branch ? esc(k.branch) : '<span class="mid">company-wide</span>'}</td>
+        <td>${k.active} / ${k.max_devices}</td>
+        <td>${stateBadge(st)}</td>
+        <td class="mid">${when(k.activated_on)}</td>
+        <td class="mid">${loc(k.lat_grid, k.lng_grid)}</td>
+        <td class="mid">${esc(k.expires_on)}</td>
+      </tr>`;
+    }
     return `<tr>
-      <td><span class="mono">${k.key}</span></td>
-      <td>${k.max_devices}</td>
-      <td>${active}</td>
-      <td>
-        <span style="font-size:12px;color:var(--mid)">${pct}%</span>
-        <div class="seats-bar"><div class="seats-fill ${fillCls}" style="width:${pct}%"></div></div>
-      </td>
-      <td class="mid">${k.expires_on}</td>
-      <td>${badge}</td>
+      <td><span class="mono">${kk}</span> <button class="btn-ghost" title="Copy key" onclick="copyKey('${kk}', this)">Copy</button></td>
+      <td><input class="label-input" type="text" maxlength="40" value="${esc(k.label || "")}" data-key="${kk}" data-orig="${esc(k.label || "")}"
+           onkeydown="if(event.key==='Enter')this.blur()" onblur="saveLabel(this)" placeholder="—"/></td>
+      <td>${stateBadge(st)}</td>
+      <td class="mid">${when(k.activated_on)}</td>
+      <td class="mid">${when(k.last_check)}</td>
+      <td class="mid">${loc(k.lat_grid, k.lng_grid)}</td>
+      <td class="mid">${esc(k.expires_on)}</td>
+      <td><div class="btn-row">
+        ${k.active > 0 ? `<button class="btn-amber-sm" onclick="keyAction('${kk}','reset')">Reset</button>` : ""}
+        ${k.status === "off"
+          ? `<button class="btn-sm" onclick="keyAction('${kk}','on')">Switch on</button>`
+          : `<button class="btn-red-sm" onclick="keyAction('${kk}','off')">Switch off</button>`}
+      </div></td>
     </tr>`;
   }).join("");
+}
 
-  // Activation map
-  const map = L.map("act-map").setView([44, -79], 6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+function renderMap() {
+  if (!actMap) {
+    actMap = L.map("act-map").setView([43.0, -80.8], 8);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(actMap);
+    actLayer = L.layerGroup().addTo(actMap);
+  }
+  actLayer.clearLayers();
   const byLoc = {};
-  acts.forEach(a => {
-    if (!a.lat_grid || !a.lng_grid) return;
-    const k = `${a.lat_grid},${a.lng_grid}`;
-    if (!byLoc[k]) byLoc[k] = { lat: a.lat_grid, lng: a.lng_grid, count: 0, over: 0 };
-    byLoc[k].count++;
-    if (a.status === "over_limit") byLoc[k].over++;
-  });
-  Object.values(byLoc).forEach(pt => {
+  const add = (lat, lng, over) => {
+    if (!lat || !lng) return;
+    const k = `${lat},${lng}`;
+    if (!byLoc[k]) byLoc[k] = { lat, lng, count: 0, over: 0 };
+    byLoc[k].count++; if (over) byLoc[k].over++;
+  };
+  if (MODE === "hq") {
+    actsData.filter(a => matchBranch(a.branch_id) && (a.status === "active" || a.status === "over_limit"))
+      .forEach(a => add(a.lat_grid, a.lng_grid, a.status === "over_limit"));
+  } else {
+    keysData.filter(k => k.active > 0).forEach(k => add(k.lat_grid, k.lng_grid, false));
+  }
+  const pts = Object.values(byLoc);
+  pts.forEach(pt => {
     const color = pt.over > 0 ? "#e74c3c" : "#2ecc71";
-    const r = Math.min(6 + pt.count * 2, 18);
-    L.circleMarker([pt.lat, pt.lng], { radius: r, fillColor: color, color: color, fillOpacity: 0.7, weight: 1 })
-      .bindPopup(`Activations: ${pt.count}${pt.over > 0 ? `<br>⚠️ ${pt.over} over-limit` : ""}`)
-      .addTo(map);
+    L.circleMarker([pt.lat, pt.lng], { radius: Math.min(6 + pt.count * 2, 18), fillColor: color, color, fillOpacity: 0.7, weight: 1 })
+      .bindPopup(`Phones: ${pt.count - pt.over}${pt.over ? `<br>⚠️ ${pt.over} refused` : ""}<br><span style="color:#888">Area rounded to about 20 km</span>`)
+      .addTo(actLayer);
   });
-
-  const atbody = document.querySelector("#act-table tbody");
-  atbody.innerHTML = acts.slice(0,50).map(a => {
-    const badge = a.status === "active"     ? '<span class="badge badge-ok">active</span>'
-                : a.status === "over_limit" ? '<span class="badge badge-err">over limit</span>'
-                : a.status === "expired"    ? '<span class="badge badge-warn">expired</span>'
-                :                             `<span class="badge">${a.status}</span>`;
-    const loc = (a.lat_grid && a.lng_grid)
-      ? `${a.lat_grid.toFixed(1)}°N  ${Math.abs(a.lng_grid).toFixed(1)}°W`
-      : "—";
-    return `<tr>
-      <td class="mid" style="white-space:nowrap">${(a.activated_on||"").slice(0,16).replace("T"," ")}</td>
-      <td><span class="mono">${a.license_key}</span></td>
-      <td>${badge}</td>
-      <td class="mid" style="font-size:12px">${loc}</td>
-    </tr>`;
-  }).join("");
-
-  // Init route dropzone after app is visible
-  rfInitDropzone();
+  if (pts.length && !mapFitted) {
+    actMap.fitBounds(pts.map(p => [p.lat, p.lng]), { padding: [40, 40], maxZoom: 9 });
+    mapFitted = true;
+  }
+  setTimeout(() => actMap.invalidateSize(), 50);
 }
 
-load();
+function renderActs() {
+  const rows = actsData.filter(a => matchBranch(a.branch_id)).slice(0, 50);
+  const bname = id => { const b = branchesData.find(x => x.id === id); return b ? esc(b.name) : '<span class="mid">company-wide</span>'; };
+  $("act-table").querySelector("tbody").innerHTML = rows.map(a => {
+    const badge = a.status === "active"     ? '<span class="badge badge-ok">active</span>'
+                : a.status === "over_limit" ? '<span class="badge badge-err">refused</span>'
+                : a.status === "expired"    ? '<span class="badge badge-warn">expired</span>'
+                : a.status === "released"   ? '<span class="badge badge-blk">reset</span>'
+                : a.status === "blocked"    ? '<span class="badge badge-blk">blocked</span>'
+                :                             `<span class="badge">${esc(a.status)}</span>`;
+    return `<tr>
+      <td class="mid" style="white-space:nowrap">${when(a.activated_on)}</td>
+      <td><span class="mono">${esc(a.license_key)}</span></td>
+      <td>${bname(a.branch_id)}</td>
+      <td>${badge}</td>
+      <td class="mid" style="font-size:12px">${loc(a.lat_grid, a.lng_grid)}</td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="5" class="mid" style="text-align:center;padding:20px">No activations</td></tr>';
+}
+
+// ── Branch manager actions ──────────────────────────────────────────
+function showMsg(id, msg, ok) { const el = $(id); el.textContent = msg; el.className = ok ? "success-msg" : "error-msg"; }
+
+async function saveLabel(input) {
+  const key = input.dataset.key;
+  const label = input.value.trim();
+  if (label === input.dataset.orig) return;
+  try {
+    const r = await branchFetch(`/api/branch/keys/${encodeURIComponent(key)}/label`, { method: "POST", body: JSON.stringify({ label }) });
+    if (!r.ok) { showMsg("keys-msg", `${key}: could not save the employee number.`, false); return; }
+    const k = keysData.find(x => x.key === key); if (k) k.label = label || null;
+    input.dataset.orig = label;
+    input.classList.add("saved"); setTimeout(() => input.classList.remove("saved"), 1200);
+    renderStats();
+    showMsg("keys-msg", `${key}: employee number ${label ? "saved" : "cleared"}.`, true);
+  } catch (e) { if (e.message !== "signed-out") showMsg("keys-msg", "Cannot reach the server.", false); }
+}
+
+async function keyAction(key, action) {
+  const k = keysData.find(x => x.key === key); if (!k) return;
+  const who = `${key}${k.label ? " (employee " + k.label + ")" : ""}`;
+  const text = {
+    reset: `Reset ${who}?\n\nThe phone using it loses the key the next time the app is started. The key can then be entered on a new phone.`,
+    off:   `Switch off ${who}?\n\nThe phone using it is stopped the next time the app is started. You can switch the key on again later.`,
+    on:    `Switch ${who} on again?\n\nThe driver enters the key in the app again.`,
+  }[action];
+  if (!confirm(text)) return;
+  try {
+    const r = await branchFetch(`/api/branch/keys/${encodeURIComponent(key)}/${action}`, { method: "POST" });
+    if (!r.ok) { showMsg("keys-msg", `${key}: could not ${action === "reset" ? "reset" : "switch"} the key.`, false); return; }
+    showMsg("keys-msg", `${key}: ${action === "reset" ? "reset" : action === "off" ? "switched off" : "switched on"}.`, true);
+    await refreshAll();
+  } catch (e) { if (e.message !== "signed-out") showMsg("keys-msg", "Cannot reach the server.", false); }
+}
+
+function copyKey(key, btn) {
+  navigator.clipboard.writeText(key).then(() => { btn.textContent = "Copied"; setTimeout(() => btn.textContent = "Copy", 1200); });
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // ROUTE FILES VIEWER
@@ -434,6 +810,7 @@ let rfMap          = null;
 let rfSelectedIdx  = -1;
 let rfMarkers      = [];
 let rfPolylines    = [];
+let rfDropzoneReady = false;
 
 function wpLL(w) {
   if (!w) return null;
@@ -456,14 +833,20 @@ function rfBuildStopDetail(s) {
   if (locParts.length) parts.push(`<div class="det-section"><div class="det-label">Location</div>${locParts.map(l=>`<div class="det-row">${l}</div>`).join("")}</div>`);
 
   const notes = [s.segment_note, s.segment_note_mid, s.segment_note_end].filter(Boolean);
-  if (notes.length) parts.push(`<div class="det-section"><div class="det-label">Segment notes</div>${notes.map(n=>`<div class="det-note">${n}</div>`).join("")}</div>`);
+  if (notes.length) parts.push(`<div class="det-section"><div class="det-label">Segment notes</div>${notes.map(n=>`<div class="det-note">${esc(n)}</div>`).join("")}</div>`);
 
-  if (s.guided_dropoff_note) parts.push(`<div class="det-section"><div class="det-label">Guided dropoff</div><div class="det-guided">↳ ${s.guided_dropoff_note}</div></div>`);
+  if (s.guided_dropoff_note) parts.push(`<div class="det-section"><div class="det-label">Guided dropoff</div><div class="det-guided">↳ ${esc(s.guided_dropoff_note)}</div></div>`);
 
   const turns = Array.isArray(s.turn_instructions) ? s.turn_instructions.filter(Boolean) : [];
-  if (turns.length) parts.push(`<div class="det-section"><div class="det-label">Turn instructions</div>${turns.map(t=>`<div class="det-turn">${t}</div>`).join("")}</div>`);
+  if (turns.length) parts.push(`<div class="det-section"><div class="det-label">Turn instructions</div>${turns.map(t=>`<div class="det-turn">${esc(t.instruction || t)}</div>`).join("")}</div>`);
 
-  if (s.osrm_guidance) parts.push(`<div class="det-section"><div class="det-label">OSRM guidance</div><div class="det-muted">${s.osrm_guidance}</div></div>`);
+  if (s.osrm_guidance && Array.isArray(s.osrm_guidance.steps) && s.osrm_guidance.steps.length) {
+    const stepHtml = s.osrm_guidance.steps.map(step => {
+      const road = step.roadName ? ` onto ${esc(step.roadName)}` : '';
+      return `<div class="det-muted">${esc(step.instruction)}${road}</div>`;
+    }).join('');
+    parts.push(`<div class="det-section"><div class="det-label">OSRM guidance</div>${stepHtml}</div>`);
+  }
 
   const wpCount = Array.isArray(s.waypoints_from_prev) ? s.waypoints_from_prev.length : null;
   if (wpCount !== null) parts.push(`<div class="det-section"><div class="det-label">GPS trace</div><div class="det-muted">${wpCount} waypoint${wpCount!==1?"s":""}</div></div>`);
@@ -472,9 +855,9 @@ function rfBuildStopDetail(s) {
 }
 
 function rfClassify(data) {
-  const today = new Date().toISOString().slice(0, 10);
+  const t = today();
   if (data.schema === "busroute-v1" && Array.isArray(data.stops)) {
-    const expired = data.valid_until && data.valid_until < today;
+    const expired = data.valid_until && data.valid_until < t;
     return { type: "computed", expired: !!expired,
       badge: expired ? '<span class="badge badge-err">Expired</span>' : '<span class="badge badge-ok">Computed ✓</span>' };
   }
@@ -497,28 +880,28 @@ async function rfHandleInput(files) {
     } catch(e) { console.warn("Route file parse error:", f.name, e); }
   }
   if (added > 0) rfRenderTable();
-  document.getElementById("rf-file-input").value = "";
+  $("rf-file-input").value = "";
 }
 
 function rfRenderTable() {
-  const card = document.getElementById("rf-files-card");
-  const tbody = document.getElementById("rf-files-tbody");
-  const today = new Date().toISOString().slice(0, 10);
+  const card = $("rf-files-card");
+  const tbody = $("rf-files-tbody");
+  const t = today();
   if (rfFiles.length === 0) { card.style.display = "none"; return; }
   card.style.display = "block";
 
   tbody.innerHTML = rfFiles.map((rf, i) => {
     const d = rf.data, isC = rf.type === "computed";
-    const routeNum   = isC ? (d.route_number || "—") : "—";
-    const runType    = isC ? (d.run_type || "—").toUpperCase() : (Array.isArray(d.runs) ? "backup" : "—");
-    const submitted  = isC && d.exported_at ? d.exported_at.slice(0, 10) : "—";
-    const validUntil = isC ? (d.valid_until || "—") : "—";
+    const routeNum   = isC ? esc(d.route_number || "—") : "—";
+    const runType    = isC ? esc((d.run_type || "—").toUpperCase()) : (Array.isArray(d.runs) ? "backup" : "—");
+    const submitted  = isC && d.exported_at ? esc(d.exported_at.slice(0, 10)) : "—";
+    const validUntil = isC ? esc(d.valid_until || "—") : "—";
     const stops      = isC ? (d.stops?.length ?? "—") : "—";
-    const runs       = isC ? (d.observed_runs ?? "—") : (Array.isArray(d.runs) ? d.runs.length : "—");
-    const expCls     = isC && d.valid_until && d.valid_until < today ? 'style="color:var(--red)"' : '';
+    const runs       = isC ? esc(d.observed_runs ?? "—") : (Array.isArray(d.runs) ? d.runs.length : "—");
+    const expCls     = isC && d.valid_until && d.valid_until < t ? 'style="color:var(--red)"' : '';
     const selCls     = rfSelectedIdx === i ? " selected" : "";
     return `<tr class="route-file-row${selCls}" onclick="rfSelect(${i})">
-      <td style="font-size:12px;color:var(--mid);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${rf.filename}">${rf.filename}</td>
+      <td style="font-size:12px;color:var(--mid);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(rf.filename)}">${esc(rf.filename)}</td>
       <td><span class="mono">${routeNum}</span></td>
       <td style="color:var(--mid);font-size:12px">${runType}</td>
       <td style="color:var(--mid);font-size:12px">${submitted}</td>
@@ -532,8 +915,8 @@ function rfRenderTable() {
 
 function rfClear() {
   rfFiles = []; rfSelectedIdx = -1;
-  document.getElementById("rf-files-card").style.display = "none";
-  document.getElementById("rf-viewer").style.display = "none";
+  $("rf-files-card").style.display = "none";
+  $("rf-viewer").style.display = "none";
 }
 
 function rfSelect(idx) {
@@ -543,17 +926,17 @@ function rfSelect(idx) {
 }
 
 function rfClose() {
-  document.getElementById("rf-viewer").style.display = "none";
+  $("rf-viewer").style.display = "none";
   rfSelectedIdx = -1;
   rfRenderTable();
 }
 
 function rfOpenViewer(rf) {
-  const viewer = document.getElementById("rf-viewer");
+  const viewer = $("rf-viewer");
   viewer.style.display = "block";
   viewer.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
-  const warn = document.getElementById("rf-type-warning");
+  const warn = $("rf-type-warning");
   if (rf.type === "raw") {
     warn.style.cssText = "display:block;padding:10px 20px;font-size:13px;border-bottom:1px solid var(--red);background:rgba(231,76,60,.1);color:var(--red)";
     warn.textContent = "⚠️  RAW BACKUP — This file has not been processed into a computed route.";
@@ -568,11 +951,10 @@ function rfOpenViewer(rf) {
   }
 
   const d = rf.data;
-  const titleEl = document.getElementById("rf-viewer-title");
-  titleEl.textContent = rf.type === "computed"
+  $("rf-viewer-title").textContent = rf.type === "computed"
     ? `Route ${d.route_number || "?"} — ${(d.run_type || "?").toUpperCase()}`
     : rf.filename.replace(/\.json$/i, "");
-  document.getElementById("rf-viewer-badge").innerHTML = rf.badge;
+  $("rf-viewer-badge").innerHTML = rf.badge;
 
   rfRenderMeta(rf);
   rfRenderStops(rf);
@@ -581,7 +963,7 @@ function rfOpenViewer(rf) {
 }
 
 function rfRenderMeta(rf) {
-  const el = document.getElementById("rf-meta-content");
+  const el = $("rf-meta-content");
   const d  = rf.data;
   if (rf.type !== "computed") {
     const runsArr = Array.isArray(d.runs) ? d.runs : [];
@@ -592,27 +974,26 @@ function rfRenderMeta(rf) {
     `;
     return;
   }
-  const today = new Date().toISOString().slice(0, 10);
-  const vc = d.valid_until && d.valid_until < today ? "var(--red)" : "var(--green)";
-  const dates = (d.run_dates || []).map(dt => `<div class="run-date">${dt}</div>`).join("");
+  const vc = d.valid_until && d.valid_until < today() ? "var(--red)" : "var(--green)";
+  const dates = (d.run_dates || []).map(dt => `<div class="run-date">${esc(dt)}</div>`).join("");
   el.innerHTML = `
     <div class="meta-row">
       <div class="meta-label">Route number</div>
-      <div class="meta-value" style="font-size:20px;font-weight:800;color:var(--green);font-family:var(--mono)">${d.route_number || "—"}</div>
+      <div class="meta-value" style="font-size:20px;font-weight:800;color:var(--green);font-family:var(--mono)">${esc(d.route_number || "—")}</div>
     </div>
-    <div class="meta-row"><div class="meta-label">Run type</div><div class="meta-value" style="font-weight:600">${(d.run_type || "—").toUpperCase()}</div></div>
-    <div class="meta-row"><div class="meta-label">Submitted</div><div class="meta-value">${d.exported_at ? d.exported_at.slice(0, 10) : "—"}</div></div>
-    <div class="meta-row"><div class="meta-label">Exported by</div><div class="meta-value" style="font-size:12px;word-break:break-all">${d.exported_by || "—"}</div></div>
-    <div class="meta-row"><div class="meta-label">Valid until</div><div class="meta-value" style="color:${vc};font-weight:600">${d.valid_until || "—"}</div></div>
+    <div class="meta-row"><div class="meta-label">Run type</div><div class="meta-value" style="font-weight:600">${esc((d.run_type || "—").toUpperCase())}</div></div>
+    <div class="meta-row"><div class="meta-label">Submitted</div><div class="meta-value">${d.exported_at ? esc(d.exported_at.slice(0, 10)) : "—"}</div></div>
+    <div class="meta-row"><div class="meta-label">Exported by</div><div class="meta-value" style="font-size:12px;word-break:break-all">${esc(d.exported_by || "—")}</div></div>
+    <div class="meta-row"><div class="meta-label">Valid until</div><div class="meta-value" style="color:${vc};font-weight:600">${esc(d.valid_until || "—")}</div></div>
     <div class="meta-row"><div class="meta-label">Stops</div><div class="meta-value">${d.stops?.length ?? "—"}</div></div>
-    <div class="meta-row"><div class="meta-label">Observed runs</div><div class="meta-value">${d.observed_runs ?? "—"}</div></div>
+    <div class="meta-row"><div class="meta-label">Observed runs</div><div class="meta-value">${esc(d.observed_runs ?? "—")}</div></div>
     ${dates ? `<div class="meta-row"><div class="meta-label">Run dates</div><div class="meta-value" style="margin-top:2px">${dates}</div></div>` : ""}
   `;
 }
 
 function rfRenderStops(rf) {
-  const list  = document.getElementById("rf-stops-list");
-  const badge = document.getElementById("rf-stop-count");
+  const list  = $("rf-stops-list");
+  const badge = $("rf-stop-count");
   const d     = rf.data;
   if (rf.type !== "computed" || !Array.isArray(d.stops)) {
     badge.textContent = "";
@@ -623,12 +1004,12 @@ function rfRenderStops(rf) {
   list.innerHTML = d.stops.map((s, i) => {
     const handoff = !!s.safe_handoff;
     const provisional = s.confidence === "provisional";
-    const students = s.avg_students !== undefined ? `${s.avg_students % 1 === 0 ? s.avg_students : s.avg_students.toFixed(1)} avg` : "";
-    const stype = s.stop_type ? ` · ${s.stop_type}` : "";
+    const students = s.avg_students !== undefined ? `${s.avg_students % 1 === 0 ? s.avg_students : (+s.avg_students).toFixed(1)} avg` : "";
+    const stype = s.stop_type ? ` · ${esc(s.stop_type)}` : "";
     return `<div class="stop-item" id="rf-stop-${i}" onclick="rfToggleStop(${i})">
       <div class="stop-header-row">
         <span class="stop-num">#${i + 1}</span>
-        <span class="stop-time">${s.time || "—"}</span>
+        <span class="stop-time">${esc(s.time || "—")}</span>
         ${handoff ? '<span class="stop-handoff">🔶</span>' : ""}
         <span class="stop-chevron">▶</span>
       </div>
@@ -640,7 +1021,7 @@ function rfRenderStops(rf) {
 }
 
 function rfToggleStop(idx) {
-  const item = document.getElementById(`rf-stop-${idx}`);
+  const item = $(`rf-stop-${idx}`);
   if (!item) return;
   const isOpen = item.classList.contains("expanded");
   document.querySelectorAll("#rf-stops-list .stop-item").forEach(el => el.classList.remove("expanded"));
@@ -675,7 +1056,6 @@ function rfRenderMap(rf) {
   }
 
   const bounds = [];
-
   d.stops.forEach((s, i) => {
     const rawWp = Array.isArray(s.waypoints_from_prev) ? s.waypoints_from_prev.map(wpLL).filter(Boolean) : [];
     let pts = rawWp.length >= 2 ? rawWp : null;
@@ -705,11 +1085,11 @@ function rfRenderMap(rf) {
     });
 
     const popup = [
-      `<b>Stop ${i + 1}</b>`, s.time ? `<br>Time: <b>${s.time}</b>` : "",
-      s.avg_students !== undefined ? `<br>Students: ${s.avg_students % 1 === 0 ? s.avg_students : s.avg_students.toFixed(1)}` : "",
+      `<b>Stop ${i + 1}</b>`, s.time ? `<br>Time: <b>${esc(s.time)}</b>` : "",
+      s.avg_students !== undefined ? `<br>Students: ${s.avg_students % 1 === 0 ? s.avg_students : (+s.avg_students).toFixed(1)}` : "",
       isProvisional ? `<br><span style="color:#f0a500">⚠ provisional</span>` : "",
       isHandoff ? `<br><span style="color:#f0a500">🔶 safe handoff</span>` : "",
-      s.segment_note ? `<br><em>${s.segment_note}</em>` : ""
+      s.segment_note ? `<br><em>${esc(s.segment_note)}</em>` : ""
     ].join("");
 
     const marker = L.marker([s.lat, s.lng], { icon })
@@ -724,23 +1104,16 @@ function rfRenderMap(rf) {
   setTimeout(() => rfMap.invalidateSize(), 150);
 }
 
-function rfFocusStop(idx) {
-  const rf = rfFiles[rfSelectedIdx];
-  if (!rf?.data?.stops?.[idx]) return;
-  const s = rf.data.stops[idx];
-  if (rfMap && s.lat != null) rfMap.setView([+s.lat, +s.lng], Math.max(rfMap.getZoom(), 15), { animate: true });
-  if (rfMarkers[idx]) rfMarkers[idx].openPopup();
-  rfHighlightStop(idx);
-}
-
 function rfHighlightStop(idx) {
   rfToggleStop(idx);
-  const el = document.getElementById(`rf-stop-${idx}`);
+  const el = $(`rf-stop-${idx}`);
   if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function rfInitDropzone() {
-  const dz = document.getElementById("route-dropzone");
+  if (rfDropzoneReady) return;
+  rfDropzoneReady = true;
+  const dz = $("route-dropzone");
   if (!dz) return;
   dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag-over"); });
   dz.addEventListener("dragleave", e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove("drag-over"); });
@@ -750,10 +1123,11 @@ function rfInitDropzone() {
   });
   dz.addEventListener("click", e => {
     if (e.target === dz || e.target.tagName === "P" || e.target.tagName === "SVG") {
-      document.getElementById("rf-file-input").click();
+      $("rf-file-input").click();
     }
   });
 }
+start();
 </script>
 </body>
 </html>
