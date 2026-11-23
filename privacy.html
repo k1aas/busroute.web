@@ -52,21 +52,21 @@
 </header>
 
 <main>
-  <div class="meta">Effective 8 October 2026 · Klaas Erwin Kouwen, operating as BusRoute</div>
+  <div class="meta">Effective 23 November 2026 · Klaas Erwin Kouwen, operating as BusRoute</div>
   <h2>Your route stays on your phone. We collect very little, and say exactly what.</h2>
 
   <section>
     <h3>Who we are</h3>
-    <p>BusRoute is a guidance app for school bus drivers, published by <strong>Klaas Erwin Kouwen, operating as BusRoute</strong>, Ontario, Canada ("we", "us"). This policy covers the BusRoute Driver app on Android and iOS and our server at osrm.busroute.app. Contact: <a href="mailto:klaas@busroute.app" style="color: var(--teal);">klaas@busroute.app</a>.</p>
+    <p>BusRoute is a guidance app for school bus drivers, published by <strong>Klaas Erwin Kouwen, operating as BusRoute</strong>, Ontario, Canada ("we", "us"). This policy covers the BusRoute Driver app on Android and iOS, our server at osrm.busroute.app, and the dashboards we provide to bus companies. Contact: <a href="mailto:klaas@busroute.app" style="color: var(--teal);">klaas@busroute.app</a>.</p>
   </section>
 
   <section>
     <h3>Summary</h3>
     <ul>
       <li>Recorded routes, stops, times, student counts and notes are stored <strong>on your phone</strong>.</li>
-      <li>The app contacts <strong>only our own server</strong>: to compute directions, to download map data, and once to activate your licence key.</li>
+      <li>The app contacts <strong>only our own server</strong>: to compute directions, to download map data, to activate your licence key, and each time it starts to check that your key is still valid.</li>
       <li>Route coordinates and map requests are <strong>not kept</strong> on the server.</li>
-      <li>Licence activation records are kept, and your bus company can see the approximate place and date of each activation.</li>
+      <li>Licence records are kept. Your bus company can see, for each of its keys, whether it is in use, the approximate place and date of activation, and the employee number its branch office recorded for the key.</li>
       <li>No accounts, no advertising, no analytics, no tracking, and no student personal information.</li>
     </ul>
   </section>
@@ -83,13 +83,21 @@
       <tr><td>You compute guidance for a route</td><td>The route's recorded GPS path, to work out turn-by-turn directions</td><td>Nothing — used to answer the request only</td></tr>
       <tr><td>You import a route, compute guidance for it, or view a route map</td><td>Which map area is needed around the route</td><td>Nothing — the map is then stored on your phone and works offline</td></tr>
       <tr><td>You enter a licence key</td><td>The key, a random device identifier created by the app, and your position at that moment, rounded to about 20 km on the phone before it is sent</td><td>The key, device identifier, date and time, your internet (IP) address, and that rounded position</td></tr>
+      <tr><td>The app starts with an internet connection</td><td>The key and the same random device identifier, to confirm that the key is still valid on this phone</td><td>The date and time of the last check</td></tr>
     </table>
     <p>Like any web server, ours keeps routine logs that may include IP addresses, for up to 14 days, for security and troubleshooting. Route coordinates and map requests are excluded from these logs.</p>
   </section>
 
   <section>
+    <h3>Licence keys and employee numbers</h3>
+    <p>Each licence key is for one phone. Your bus company's branch office hands out the keys and may record your <strong>employee number</strong> with your key on its dashboard, so it knows which key belongs to which driver. We store that number with the key. We do not receive your name.</p>
+    <p>The branch office can <strong>reset</strong> a key (for example when you get a new phone) or <strong>switch it off</strong> (for example when you leave). The app then asks for a licence key the next time it starts with an internet connection. Without internet the app keeps working; after 30 days without a successful check it asks you to connect.</p>
+  </section>
+
+  <section>
     <h3>What your bus company sees</h3>
-    <p>The bus company that holds your licence has a dashboard showing the approximate location (about 20 km) and date of each activation of its licence keys, and how many keys are in use. It does not see your routes, your driving, or your location at any other time.</p>
+    <p>Your branch office has a dashboard, protected by a password, showing for each of its keys: the employee number it recorded, whether the key is in use, the date of activation and of the last check, and the approximate area (about 20 km) where the key was activated. Head office has a read-only overview of all branches with the same information, without employee numbers.</p>
+    <p>Your bus company does not see your routes, your driving, or your location at any other time.</p>
   </section>
 
   <section>
@@ -103,7 +111,7 @@
 
   <section>
     <h3>Where data is stored and for how long</h3>
-    <p>Our server is operated for us by Hetzner Online and is located in Germany, so activation records are stored outside Canada. Activation records are kept while the licence is active and deleted within 12 months after it ends. Server logs are kept for up to 14 days. Data on your phone stays until you delete it or uninstall the app; route data in the app stops working for guidance after 105 days.</p>
+    <p>Our server is operated for us by Hetzner Online and is located in Germany, so licence records are stored outside Canada. Activation records, check dates and employee numbers are kept while the licence is active and deleted within 12 months after it ends. The branch office can remove an employee number at any time. Server logs are kept for up to 14 days. Data on your phone stays until you delete it or uninstall the app; route data in the app stops working for guidance after 105 days.</p>
   </section>
 
   <section>
@@ -124,12 +132,12 @@
 
   <section>
     <h3>Security</h3>
-    <p>All communication with our server is encrypted (HTTPS). Activation data is accessible only to us and, for its own keys, to your bus company through its dashboard.</p>
+    <p>All communication with our server is encrypted (HTTPS). Licence data is accessible only to us and, for its own keys, to your bus company: branch offices through a dashboard with a personal password, head office through a private read-only link.</p>
   </section>
 
   <section>
     <h3>Your rights</h3>
-    <p>You can ask what activation data we hold for your device, and ask us to correct or delete it, by writing to <a href="mailto:klaas@busroute.app" style="color: var(--teal);">klaas@busroute.app</a>. We will reply within 30 days. How to request deletion is explained on <a href="delete-data.html" style="color: var(--teal);">Delete your data</a>. Uninstalling the app deletes everything stored on the phone. If you are not satisfied with our answer, you can contact the Office of the Privacy Commissioner of Canada.</p>
+    <p>You can ask what data we hold for your device or licence key, including any employee number, and ask us to correct or delete it, by writing to <a href="mailto:klaas@busroute.app" style="color: var(--teal);">klaas@busroute.app</a>. We will reply within 30 days. How to request deletion is explained on <a href="delete-data.html" style="color: var(--teal);">Delete your data</a>. Uninstalling the app deletes everything stored on the phone. If you are not satisfied with our answer, you can contact the Office of the Privacy Commissioner of Canada.</p>
   </section>
 
   <section>
