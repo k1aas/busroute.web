@@ -40,6 +40,9 @@
   .btn-sm { background: var(--green-dk); color: #fff; padding: 6px 12px; font-size: 12px; }
   .btn-red  { background: var(--red); color: #fff; padding: 6px 12px; font-size: 12px; }
   .btn-amber { background: var(--amber); color: #000; padding: 6px 12px; font-size: 12px; }
+  .btn-ghost { background: transparent; color: var(--mid); border: 1px solid var(--border); padding: 4px 10px; font-size: 11px; }
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn-row button { font-size: 11px; padding: 4px 10px; }
 
   /* ── Layout ── */
   #app { display: none; }
@@ -48,7 +51,7 @@
   .top-bar .env  { font-size: 11px; color: var(--mid); background: var(--card); border-radius: 4px; padding: 2px 8px; font-family: var(--mono); }
   .top-bar .spacer { flex: 1; }
 
-  nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 2px; }
+  nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 2px; flex-wrap: wrap; }
   .tab { padding: 12px 18px; color: var(--mid); cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px; font-weight: 500; transition: color .15s, border-color .15s; }
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--green); border-color: var(--green); }
@@ -58,17 +61,20 @@
   /* ── Cards ── */
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
   .card-title { font-size: 13px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+  .hint { color: var(--mid); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
 
   /* ── Tables ── */
+  .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--mid); text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
   td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(255,255,255,.02); }
   .mono { font-family: var(--mono); font-size: 12px; color: var(--green); }
+  .muted { color: var(--mid); font-size: 12px; }
 
   /* ── Status badges ── */
-  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; }
   .badge-ok     { background: rgba(46,204,113,.15); color: var(--green); }
   .badge-warn   { background: rgba(240,165,0,.15); color: var(--amber); }
   .badge-err    { background: rgba(231,76,60,.15); color: var(--red); }
@@ -83,6 +89,8 @@
     color: var(--text); padding: 8px 12px; font-size: 13px; outline: none; min-width: 160px;
   }
   .form-group select { appearance: none; }
+  .form-row .btn-green { width: auto; margin-top: 0; }
+  .new-keys { font-family: var(--mono); font-size: 12px; color: var(--green); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; margin-top: 10px; white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
 
   /* ── Maps ── */
   #activation-map { height: 400px; border-radius: 8px; border: 1px solid var(--border); margin-top: 16px; }
@@ -235,11 +243,14 @@
     <span class="logo">BusRoute Admin</span>
     <span class="env" id="api-host"></span>
     <span class="spacer"></span>
+    <span class="muted" id="last-loaded"></span>
+    <button class="btn-sm" id="refresh-btn" onclick="refreshAll()">↻ Refresh</button>
     <button class="btn-sm" onclick="logout()">Sign out</button>
   </div>
   <nav>
     <div class="tab active" onclick="showTab('overview', this)">Overview</div>
     <div class="tab" onclick="showTab('companies', this)">Companies</div>
+    <div class="tab" onclick="showTab('branches', this)">Branches &amp; managers</div>
     <div class="tab" onclick="showTab('keys', this)">License Keys</div>
     <div class="tab" onclick="showTab('trial', this)">🍎 Trial Keys</div>
     <div class="tab" onclick="showTab('activations', this)">Activations</div>
@@ -252,9 +263,11 @@
     <div id="tab-overview" class="tab-panel active">
       <div class="stats-row" id="stats-row">
         <div class="stat-card"><div class="num" id="stat-companies">—</div><div class="lbl">Companies</div></div>
+        <div class="stat-card"><div class="num" id="stat-branches">—</div><div class="lbl">Branches</div></div>
         <div class="stat-card"><div class="num" id="stat-keys">—</div><div class="lbl">License keys</div></div>
         <div class="stat-card"><div class="num" id="stat-active">—</div><div class="lbl">Active devices</div></div>
-        <div class="stat-card"><div class="num" id="stat-overlimit" style="color:var(--red)">—</div><div class="lbl">Over-limit attempts</div></div>
+        <div class="stat-card"><div class="num" id="stat-off" style="color:var(--mid)">—</div><div class="lbl">Keys switched off</div></div>
+        <div class="stat-card"><div class="num" id="stat-overlimit" style="color:var(--red)">—</div><div class="lbl">Refused phones</div></div>
       </div>
       <div class="card">
         <div class="card-title">Activation map — all companies</div>
@@ -269,39 +282,107 @@
         <div class="form-row">
           <div class="form-group"><label>Company name</label><input id="co-name" type="text" placeholder="Langs Bus Lines"/></div>
           <div class="form-group"><label>2-char prefix</label><input id="co-prefix" type="text" placeholder="LA" maxlength="2" style="min-width:80px;text-transform:uppercase"/></div>
-          <button class="btn-green" style="margin-bottom:0" onclick="createCompany()">Add company</button>
+          <button class="btn-green" onclick="createCompany()">Add company</button>
         </div>
         <div id="co-msg"></div>
       </div>
       <div class="card">
         <div class="card-title">All companies</div>
+        <p class="hint">The head office link is read-only: keys and activations of all branches. Send it to the company's head office.</p>
+        <div class="table-wrap">
         <table id="companies-table">
-          <thead><tr><th>ID</th><th>Name</th><th>Prefix</th><th>Dashboard URL</th></tr></thead>
+          <thead><tr><th>ID</th><th>Name</th><th>Prefix</th><th>Head office link</th></tr></thead>
           <tbody></tbody>
         </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRANCHES & MANAGERS -->
+    <div id="tab-branches" class="tab-panel">
+      <div class="card">
+        <div class="card-title">Add branch</div>
+        <div class="form-row">
+          <div class="form-group"><label>Company</label><select id="br-company"></select></div>
+          <div class="form-group"><label>Branch name</label><input id="br-name" type="text" placeholder="Tillsonburg"/></div>
+          <button class="btn-green" onclick="createBranch()">Add branch</button>
+        </div>
+        <div id="br-msg"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Branches</div>
+        <div class="table-wrap">
+        <table id="branches-table">
+          <thead><tr><th>Company</th><th>Branch</th><th>Keys</th><th>Active</th><th>Managers</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Add branch manager</div>
+        <p class="hint">The manager signs in on the branch page with this username and password. Passwords are stored hashed: write it down or send it now, it cannot be shown again. At least 10 characters.</p>
+        <div class="form-row">
+          <div class="form-group"><label>Branch</label><select id="mg-branch"></select></div>
+          <div class="form-group"><label>Username</label><input id="mg-user" type="text" placeholder="e.g. tillsonburg.office"/></div>
+          <div class="form-group"><label>Password</label><input id="mg-pass" type="text" style="min-width:220px"/></div>
+          <button class="btn-sm" style="margin-bottom:2px" onclick="document.getElementById('mg-pass').value = newPassword()">Suggest password</button>
+          <button class="btn-green" onclick="createManager()">Add manager</button>
+        </div>
+        <div id="mg-msg"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Branch managers</div>
+        <div class="table-wrap">
+        <table id="managers-table">
+          <thead><tr><th>Company</th><th>Branch</th><th>Username</th><th>Created</th><th>Last sign-in</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
       </div>
     </div>
 
     <!-- LICENSE KEYS -->
     <div id="tab-keys" class="tab-panel">
       <div class="card">
-        <div class="card-title">Issue new key</div>
+        <div class="card-title">Driver keys for a branch</div>
+        <p class="hint">One key per phone. The branch manager enters the employee number per key on the branch page. Leave the expiry empty for July 31 of the current licence year.</p>
+        <div class="form-row">
+          <div class="form-group"><label>Branch</label><select id="bk-branch"></select></div>
+          <div class="form-group"><label>Number of keys</label><input id="bk-count" type="number" value="10" min="1" max="500" style="min-width:90px"/></div>
+          <div class="form-group"><label>Expires (optional)</label><input id="bk-expires" type="date"/></div>
+          <div class="form-group"><label>Notes</label><input id="bk-notes" type="text" placeholder="e.g. 2026-27 order" style="min-width:200px"/></div>
+          <button class="btn-green" onclick="createBatch()">Create keys</button>
+        </div>
+        <div id="bk-msg"></div>
+        <div id="bk-list" class="new-keys" style="display:none"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Shared key (several phones on one key)</div>
+        <p class="hint">For trials, demos and the old company-wide keys. Not for drivers of a branch: use driver keys above.</p>
         <div class="form-row">
           <div class="form-group"><label>Company</label>
             <select id="key-company-select"><option value="">Select…</option></select>
           </div>
           <div class="form-group"><label>Max devices</label><input id="key-max" type="number" value="10" min="1" max="500" style="min-width:90px"/></div>
-          <div class="form-group"><label>Notes</label><input id="key-notes" type="text" placeholder="e.g. 2026 season" style="min-width:200px"/></div>
-          <button class="btn-green" style="margin-bottom:0" onclick="createKey()">Generate key</button>
+          <div class="form-group"><label>Notes</label><input id="key-notes" type="text" placeholder="e.g. demo" style="min-width:200px"/></div>
+          <button class="btn-green" onclick="createKey()">Generate key</button>
         </div>
         <div id="key-msg"></div>
       </div>
       <div class="card">
         <div class="card-title">All license keys</div>
+        <div class="form-row">
+          <div class="form-group"><label>Company</label><select id="kf-company" onchange="renderKeys()"></select></div>
+          <div class="form-group"><label>Branch</label><select id="kf-branch" onchange="renderKeys()"></select></div>
+          <div class="form-group"><label>Search key or label</label><input id="kf-text" type="text" oninput="renderKeys()" style="min-width:200px"/></div>
+        </div>
+        <div id="keys-msg"></div>
+        <div class="table-wrap">
         <table id="keys-table">
-          <thead><tr><th>Key</th><th>Company</th><th>Max devices</th><th>Active</th><th>Expires</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Key</th><th>Company</th><th>Branch</th><th>Label</th><th>Phones</th><th>Status</th><th>Activated</th><th>Last check</th><th>Expires</th><th>Notes</th><th>Action</th></tr></thead>
           <tbody></tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -328,16 +409,12 @@
             <label>Notes</label>
             <input id="trial-notes" type="text" value="App Store trial" style="min-width:200px"/>
           </div>
-          <button class="btn-green" style="margin-bottom:0;width:auto" onclick="createTrialKey()">
+          <button class="btn-green" onclick="createTrialKey()">
             Generate trial key
           </button>
         </div>
         <div id="trial-msg"></div>
-        <div id="trial-server-note" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(240,165,0,.12);border:1px solid var(--amber);border-radius:6px;font-size:12px;color:var(--amber)">
-          ⚠️ The server returned a different expiry than requested. The server may not yet support
-          custom expiry dates — the key will use the server's default (usually 1 year).
-          A small server-side change is needed to honour custom expiry.
-        </div>
+        <div id="trial-server-note" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(240,165,0,.12);border:1px solid var(--amber);border-radius:6px;font-size:12px;color:var(--amber)"></div>
       </div>
       <div class="card">
         <div class="card-title">All trial keys</div>
@@ -361,10 +438,13 @@
     <div id="tab-activations" class="tab-panel">
       <div class="card">
         <div class="card-title">Recent activations (last 500)</div>
+        <p class="hint">One row per phone and key. Block stops one phone on a shared key; Unblock frees its seat, so the phone activates again like a new one. For driver keys, use Switch off or Reset on the License Keys tab.</p>
+        <div class="table-wrap">
         <table id="activations-table">
-          <thead><tr><th>When</th><th>Key</th><th>Company</th><th>Status</th><th>IP</th><th>Location (grid)</th><th>Action</th></tr></thead>
+          <thead><tr><th>When</th><th>Key</th><th>Company</th><th>Branch</th><th>Label</th><th>Status</th><th>IP</th><th>Location (grid)</th><th>Last check</th><th>Action</th></tr></thead>
           <tbody></tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -450,11 +530,22 @@
 
 <script>
 const API_BASE = "https://osrm.busroute.app";
+// [2026-11-22] The head office page (branch_dashboard.html, read-only) lives on
+// the website, not on the server. Before, the Companies tab showed the server's
+// data address (/api/dashboard/...), which opens as plain text.
+const DASHBOARD_PAGE = "https://busroute.app/branch_dashboard.html";
 let adminSecret = "";
 let map = null;
 let activationData = [];
 let companiesData = [];
 let keysData = [];
+let branchesData = [];
+let managersData = [];
+
+// Text from the server that people typed (labels, notes, names) is shown with
+// esc(), never as HTML.
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const when = s => s ? String(s).slice(0,16).replace("T"," ") : "—";
 
 // ── Auth ──────────────────────────────────────────────────────────
 async function login() {
@@ -487,44 +578,66 @@ function apiFetch(path, opts={}) {
   });
 }
 
+async function apiPost(path, body) {
+  const r = await apiFetch(path, { method: "POST", body: JSON.stringify(body || {}) });
+  let data = {};
+  try { data = await r.json(); } catch(e) {}
+  return { ok: r.ok, status: r.status, data };
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────
 function showTab(name, tabEl) {
   document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.getElementById("tab-" + name).classList.add("active");
   if (tabEl) tabEl.classList.add("active");
-  // Invalidate route map when switching to it
-  if (name === "routefiles" && routeMap) {
-    setTimeout(() => routeMap.invalidateSize(), 100);
-  }
+  if (name === "routefiles" && routeMap) setTimeout(() => routeMap.invalidateSize(), 100);
+  if (name === "overview" && map) setTimeout(() => map.invalidateSize(), 100);
 }
 
 // ── Load all data ─────────────────────────────────────────────────
 async function loadAll() {
-  const [cos, keys, acts] = await Promise.all([
+  const [cos, keys, acts, brs, mgs] = await Promise.all([
     apiFetch("/api/admin/companies").then(r=>r.json()),
     apiFetch("/api/admin/keys").then(r=>r.json()),
     apiFetch("/api/admin/activations").then(r=>r.json()),
+    apiFetch("/api/admin/branches").then(r=>r.ok ? r.json() : []),
+    apiFetch("/api/admin/managers").then(r=>r.ok ? r.json() : []),
   ]);
   companiesData = cos;
   keysData = keys;
   activationData = acts;
+  branchesData = brs;
+  managersData = mgs;
   renderCompanies();
+  renderBranches();
+  renderManagers();
+  renderSelects();
   renderKeys();
   renderActivations();
   renderStats();
   renderMap();
   renderTrialKeys();
+  document.getElementById("last-loaded").textContent = "Updated " + new Date().toLocaleTimeString();
+}
+
+// Reloads everything from the server, without signing in again.
+async function refreshAll() {
+  const btn = document.getElementById("refresh-btn");
+  btn.disabled = true; btn.textContent = "Loading…";
+  try { await loadAll(); }
+  catch (e) { alert("Cannot reach server: " + e.message); }
+  finally { btn.disabled = false; btn.textContent = "↻ Refresh"; }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────
 function renderStats() {
   document.getElementById("stat-companies").textContent = companiesData.length;
+  document.getElementById("stat-branches").textContent = branchesData.length;
   document.getElementById("stat-keys").textContent = keysData.length;
-  const active = activationData.filter(a => a.status === "active").length;
-  const over   = activationData.filter(a => a.status === "over_limit").length;
-  document.getElementById("stat-active").textContent = active;
-  document.getElementById("stat-overlimit").textContent = over;
+  document.getElementById("stat-active").textContent = keysData.reduce((s,k) => s + (k.active||0), 0);
+  document.getElementById("stat-off").textContent = keysData.filter(k => k.status === "off").length;
+  document.getElementById("stat-overlimit").textContent = activationData.filter(a => a.status === "over_limit").length;
 }
 
 // ── Activation Map ────────────────────────────────────────────────
@@ -543,7 +656,7 @@ function renderMap() {
   activationData.forEach(a => {
     if (!a.lat_grid || !a.lng_grid) return;
     const k = `${a.lat_grid},${a.lng_grid},${a.license_key}`;
-    if (!byKey[k]) byKey[k] = { lat: a.lat_grid, lng: a.lng_grid, key: a.license_key, company: a.company, count: 0, statuses: [] };
+    if (!byKey[k]) byKey[k] = { lat: a.lat_grid, lng: a.lng_grid, key: a.license_key, company: a.company, branch: a.branch, count: 0, statuses: [] };
     byKey[k].count++;
     byKey[k].statuses.push(a.status);
   });
@@ -555,66 +668,237 @@ function renderMap() {
     L.circleMarker([pt.lat, pt.lng], {
       radius: r, fillColor: color, color: color,
       fillOpacity: 0.7, weight: 1
-    }).bindPopup(`<b>${pt.company}</b><br>Key: ${pt.key}<br>Activations: ${pt.count}${hasOver ? "<br>⚠️ Over-limit attempts" : ""}`).addTo(map);
+    }).bindPopup(`<b>${esc(pt.company)}</b>${pt.branch ? " · " + esc(pt.branch) : ""}<br>Key: ${esc(pt.key)}<br>Activations: ${pt.count}${hasOver ? "<br>⚠️ Refused phones" : ""}`).addTo(map);
   });
 }
 
 // ── Companies ─────────────────────────────────────────────────────
+function hqLink(c) { return `${DASHBOARD_PAGE}?token=${encodeURIComponent(c.dashboard_token)}`; }
+
 function renderCompanies() {
   const tbody = document.querySelector("#companies-table tbody");
-  tbody.innerHTML = companiesData.map(c => `
+  tbody.innerHTML = companiesData.map((c, i) => `
     <tr>
       <td>${c.id}</td>
-      <td>${c.name}</td>
-      <td><span class="mono">${c.prefix}</span></td>
-      <td><span class="mono" style="font-size:11px;color:var(--mid)">${API_BASE}/api/dashboard/${c.dashboard_token}</span>
-          <button class="btn-sm" style="margin-left:8px" onclick="copyUrl('${API_BASE}/api/dashboard/${c.dashboard_token}')">Copy</button></td>
+      <td>${esc(c.name)}</td>
+      <td><span class="mono">${esc(c.prefix)}</span></td>
+      <td><span class="mono" style="font-size:11px;color:var(--mid);word-break:break-all">${esc(hqLink(c))}</span>
+          <button class="btn-sm" style="margin-left:8px" onclick="copyUrl(hqLink(companiesData[${i}]))">Copy</button></td>
     </tr>`).join("");
-
-  const sel = document.getElementById("key-company-select");
-  sel.innerHTML = '<option value="">Select…</option>' + companiesData.map(c =>
-    `<option value="${c.id}">${c.name} (${c.prefix})</option>`).join("");
 }
 
 async function createCompany() {
   const name   = document.getElementById("co-name").value.trim();
   const prefix = document.getElementById("co-prefix").value.trim().toUpperCase();
   if (!name || prefix.length !== 2) { showMsg("co-msg", "Name and 2-char prefix required.", false); return; }
-  const r = await apiFetch("/api/admin/companies", { method: "POST", body: JSON.stringify({name, prefix}) });
-  const data = await r.json();
-  if (r.ok) {
-    showMsg("co-msg", `Company created. Dashboard URL: ${API_BASE}/api/dashboard/${data.dashboard_token}`, true);
+  const { ok, data } = await apiPost("/api/admin/companies", {name, prefix});
+  if (ok) {
+    showMsg("co-msg", `Company created. Head office link: ${hqLink(data)}`, true);
     await loadAll();
   } else {
     showMsg("co-msg", data.error || "Error creating company.", false);
   }
 }
 
-// ── Keys ──────────────────────────────────────────────────────────
-function renderKeys() {
-  const counts = {};
-  activationData.filter(a=>a.status==="active").forEach(a => {
-    counts[a.license_key] = (counts[a.license_key]||0) + 1;
-  });
+// ── Branches & managers ───────────────────────────────────────────
+function branchLabel(b) { return `${b.company} · ${b.name}`; }
 
-  const tbody = document.querySelector("#keys-table tbody");
-  const today = new Date().toISOString().slice(0,10);
-  tbody.innerHTML = keysData.map(k => {
-    const active = counts[k.key] || 0;
-    const expired = k.expires_on < today;
-    const over = active >= k.max_devices;
-    const badge = expired ? '<span class="badge badge-err">Expired</span>'
-                : over    ? '<span class="badge badge-warn">Full</span>'
-                :           '<span class="badge badge-ok">Active</span>';
+function renderSelects() {
+  const coOpts = companiesData.map(c => `<option value="${c.id}">${esc(c.name)} (${esc(c.prefix)})</option>`).join("");
+  const brOpts = branchesData.map(b => `<option value="${b.id}">${esc(branchLabel(b))}</option>`).join("");
+  document.getElementById("br-company").innerHTML = '<option value="">Select…</option>' + coOpts;
+  document.getElementById("key-company-select").innerHTML = '<option value="">Select…</option>' + coOpts;
+  document.getElementById("mg-branch").innerHTML = '<option value="">Select…</option>' + brOpts;
+  document.getElementById("bk-branch").innerHTML = '<option value="">Select…</option>' + brOpts;
+  // Filters keep their choice across reloads
+  const kfc = document.getElementById("kf-company"), kfb = document.getElementById("kf-branch");
+  const cSel = kfc.value, bSel = kfb.value;
+  kfc.innerHTML = '<option value="">All</option>' + coOpts;
+  kfb.innerHTML = '<option value="">All</option><option value="none">No branch (shared keys)</option>' + brOpts;
+  kfc.value = cSel; kfb.value = bSel;
+}
+
+function renderBranches() {
+  const tbody = document.querySelector("#branches-table tbody");
+  if (!branchesData.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">No branches yet — add one above</td></tr>';
+    return;
+  }
+  tbody.innerHTML = branchesData.map(b => {
+    const bk = keysData.filter(k => k.branch_id === b.id);
+    const active = bk.filter(k => k.active > 0 && k.status === "on").length;
+    const mgs = managersData.filter(m => m.branch_id === b.id).map(m => esc(m.username)).join(", ");
     return `<tr>
-      <td><span class="mono">${k.key}</span></td>
-      <td>${k.company}</td>
-      <td>${k.max_devices}</td>
-      <td>${active} / ${k.max_devices} ${badge}</td>
-      <td>${k.expires_on}</td>
-      <td style="color:var(--mid)">${k.notes||""}</td>
+      <td>${esc(b.company)}</td>
+      <td>${esc(b.name)}</td>
+      <td>${bk.length}</td>
+      <td>${active}</td>
+      <td class="muted">${mgs || "—"}</td>
     </tr>`;
   }).join("");
+}
+
+async function createBranch() {
+  const company_id = parseInt(document.getElementById("br-company").value);
+  const name = document.getElementById("br-name").value.trim();
+  if (!company_id || !name) { showMsg("br-msg", "Choose a company and enter the branch name.", false); return; }
+  const { ok, data } = await apiPost("/api/admin/branches", { company_id, name });
+  if (ok) { showMsg("br-msg", `Branch ${name} added.`, true); document.getElementById("br-name").value = ""; await loadAll(); }
+  else showMsg("br-msg", data.error || "Error adding branch.", false);
+}
+
+function newPassword() {
+  // 14 characters, no look-alikes (0/O, 1/l/I)
+  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const a = new Uint32Array(14); crypto.getRandomValues(a);
+  return Array.from(a, n => chars[n % chars.length]).join("");
+}
+
+function renderManagers() {
+  const tbody = document.querySelector("#managers-table tbody");
+  if (!managersData.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:20px">No branch managers yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = managersData.map(m => `<tr>
+      <td>${esc(m.company)}</td>
+      <td>${esc(m.branch)}</td>
+      <td><span class="mono">${esc(m.username)}</span></td>
+      <td class="muted">${when(m.created_on)}</td>
+      <td class="muted">${when(m.last_login)}</td>
+      <td><div class="btn-row">
+        <button class="btn-sm" onclick="resetManagerPassword(${m.id})">New password</button>
+        <button class="btn-red" onclick="deleteManager(${m.id})">Delete</button>
+      </div></td>
+    </tr>`).join("");
+}
+
+async function createManager() {
+  const branch_id = parseInt(document.getElementById("mg-branch").value);
+  const username = document.getElementById("mg-user").value.trim().toLowerCase();
+  const password = document.getElementById("mg-pass").value;
+  if (!branch_id || !username) { showMsg("mg-msg", "Choose a branch and enter a username.", false); return; }
+  if (password.length < 10) { showMsg("mg-msg", "Password must be at least 10 characters.", false); return; }
+  const { ok, data } = await apiPost("/api/admin/managers", { branch_id, username, password });
+  if (ok) {
+    showMsg("mg-msg", `Manager ${username} added. Password: ${password}  (write it down now; it cannot be shown again)`, true);
+    document.getElementById("mg-user").value = ""; document.getElementById("mg-pass").value = "";
+    await loadAll();
+  } else showMsg("mg-msg", data.error || "Error adding manager.", false);
+}
+
+async function resetManagerPassword(id) {
+  const m = managersData.find(x => x.id === id); if (!m) return;
+  const suggested = newPassword();
+  const password = prompt(`New password for ${m.username} (at least 10 characters). They are signed out everywhere.`, suggested);
+  if (password === null) return;
+  if (password.length < 10) { alert("Password must be at least 10 characters."); return; }
+  const { ok, data } = await apiPost(`/api/admin/managers/${id}/password`, { password });
+  if (ok) showMsg("mg-msg", `New password for ${m.username}: ${password}  (write it down now)`, true);
+  else alert("Error: " + (data.error || "unknown"));
+}
+
+async function deleteManager(id) {
+  const m = managersData.find(x => x.id === id); if (!m) return;
+  if (!confirm(`Delete manager ${m.username} (${m.branch})? They can no longer sign in. Keys are not affected.`)) return;
+  const { ok, data } = await apiPost(`/api/admin/managers/${id}/delete`);
+  if (ok) await loadAll(); else alert("Error: " + (data.error || "unknown"));
+}
+
+// ── Keys ──────────────────────────────────────────────────────────
+function keyStatusBadge(k) {
+  const today = new Date().toISOString().slice(0,10);
+  if (k.status === "off") return '<span class="badge badge-blk">Switched off</span>';
+  if (k.expires_on < today) return '<span class="badge badge-err">Expired</span>';
+  if (k.active > k.max_devices) return '<span class="badge badge-err">Over limit</span>';
+  if (k.active >= k.max_devices) return k.max_devices === 1 ? '<span class="badge badge-ok">In use</span>' : '<span class="badge badge-warn">Full</span>';
+  if (k.active > 0) return '<span class="badge badge-ok">Active</span>';
+  return k.label ? '<span class="badge badge-warn">Handed out</span>' : '<span class="badge badge-blk">Free</span>';
+}
+
+function filteredKeys() {
+  const c = document.getElementById("kf-company").value;
+  const b = document.getElementById("kf-branch").value;
+  const t = document.getElementById("kf-text").value.trim().toUpperCase();
+  return keysData.filter(k =>
+    (!c || String(k.company_id) === c) &&
+    (!b || (b === "none" ? k.branch_id == null : String(k.branch_id) === b)) &&
+    (!t || k.key.includes(t) || String(k.label || "").toUpperCase().includes(t))
+  );
+}
+
+function renderKeys() {
+  const rows = filteredKeys();
+  const tbody = document.querySelector("#keys-table tbody");
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="muted" style="text-align:center;padding:20px">No keys</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(k => {
+    const kk = esc(k.key);
+    return `<tr>
+      <td><span class="mono">${kk}</span></td>
+      <td>${esc(k.company)}</td>
+      <td>${k.branch ? esc(k.branch) : '<span class="muted">shared</span>'}</td>
+      <td>${k.label ? esc(k.label) : '<span class="muted">—</span>'}</td>
+      <td>${k.active} / ${k.max_devices}</td>
+      <td>${keyStatusBadge(k)}</td>
+      <td class="muted">${when(k.activated_on)}</td>
+      <td class="muted">${when(k.last_check)}</td>
+      <td class="muted">${esc(k.expires_on)}</td>
+      <td class="muted">${esc(k.notes || "")}</td>
+      <td><div class="btn-row">
+        <button class="btn-ghost" onclick="keyLabel('${kk}')">Label</button>
+        ${k.active > 0 ? `<button class="btn-amber" onclick="keyAction('${kk}','reset')">Reset</button>` : ""}
+        ${k.status === "off"
+          ? `<button class="btn-sm" onclick="keyAction('${kk}','on')">Switch on</button>`
+          : `<button class="btn-red" onclick="keyAction('${kk}','off')">Switch off</button>`}
+      </div></td>
+    </tr>`;
+  }).join("");
+}
+
+async function keyAction(key, action) {
+  const k = keysData.find(x => x.key === key); if (!k) return;
+  const who = `${key}${k.label ? " (" + k.label + ")" : ""}`;
+  const text = {
+    off:   `Switch off ${who}?\n\nPhones using it are stopped at their next app start (app 1.0.21 or later). It can be switched on again.`,
+    on:    `Switch ${who} on again?`,
+    reset: `Reset ${who}?\n\nThe phone${k.max_devices > 1 ? "s" : ""} using it now lose${k.max_devices > 1 ? "" : "s"} the key at the next app start, and the key can be entered on a new phone.`,
+  }[action];
+  if (!confirm(text)) return;
+  const { ok, data } = await apiPost(`/api/admin/keys/${encodeURIComponent(key)}/${action}`);
+  if (ok) { showMsg("keys-msg", `${key}: ${action === "off" ? "switched off" : action === "on" ? "switched on" : "reset"}.`, true); await loadAll(); }
+  else showMsg("keys-msg", `${key}: ${data.error || "error " + (data.status || "")}`, false);
+}
+
+async function keyLabel(key) {
+  const k = keysData.find(x => x.key === key); if (!k) return;
+  const label = prompt(`Label for ${key} (employee number; empty to clear):`, k.label || "");
+  if (label === null) return;
+  const { ok, data } = await apiPost(`/api/admin/keys/${encodeURIComponent(key)}/label`, { label });
+  if (ok) await loadAll(); else showMsg("keys-msg", data.error || "Error saving label.", false);
+}
+
+async function createBatch() {
+  const branch_id = parseInt(document.getElementById("bk-branch").value);
+  const count = parseInt(document.getElementById("bk-count").value);
+  const expires_on = document.getElementById("bk-expires").value;
+  const notes = document.getElementById("bk-notes").value.trim();
+  if (!branch_id) { showMsg("bk-msg", "Choose a branch.", false); return; }
+  if (!(count >= 1 && count <= 500)) { showMsg("bk-msg", "Number of keys: 1 to 500.", false); return; }
+  const b = branchesData.find(x => x.id === branch_id);
+  if (!confirm(`Create ${count} driver key${count > 1 ? "s" : ""} for ${b ? branchLabel(b) : "this branch"}?`)) return;
+  const body = { branch_id, count, notes };
+  if (expires_on) body.expires_on = expires_on;
+  const { ok, data } = await apiPost("/api/admin/keys/batch", body);
+  if (ok) {
+    showMsg("bk-msg", `${data.keys.length} keys created, valid until ${data.expires_on}.`, true);
+    const list = document.getElementById("bk-list");
+    list.textContent = data.keys.join("\n");
+    list.style.display = "block";
+    await loadAll();
+  } else showMsg("bk-msg", data.error || "Error creating keys.", false);
 }
 
 async function createKey() {
@@ -622,9 +906,8 @@ async function createKey() {
   const max_devices = parseInt(document.getElementById("key-max").value);
   const notes       = document.getElementById("key-notes").value.trim();
   if (!company_id) { showMsg("key-msg","Select a company.",false); return; }
-  const r = await apiFetch("/api/admin/keys", { method: "POST", body: JSON.stringify({company_id, max_devices, notes}) });
-  const data = await r.json();
-  if (r.ok) {
+  const { ok, data } = await apiPost("/api/admin/keys", {company_id, max_devices, notes});
+  if (ok) {
     showMsg("key-msg", `Key generated: ${data.key}  ·  Expires: ${data.expires_on}  ·  Max devices: ${data.max_devices}`, true);
     await loadAll();
   } else {
@@ -635,25 +918,29 @@ async function createKey() {
 // ── Activations ───────────────────────────────────────────────────
 function renderActivations() {
   const tbody = document.querySelector("#activations-table tbody");
-  tbody.innerHTML = activationData.slice(0,200).map(a => {
+  tbody.innerHTML = activationData.slice(0,200).map((a, i) => {
     const badge = a.status === "active"     ? '<span class="badge badge-ok">active</span>'
-                : a.status === "over_limit" ? '<span class="badge badge-err">over limit</span>'
+                : a.status === "over_limit" ? '<span class="badge badge-err">refused</span>'
                 : a.status === "expired"    ? '<span class="badge badge-warn">expired</span>'
                 : a.status === "blocked"    ? '<span class="badge badge-blk">blocked</span>'
-                :                             `<span class="badge">${a.status}</span>`;
+                : a.status === "released"   ? '<span class="badge badge-blk">reset</span>'
+                :                             `<span class="badge">${esc(a.status)}</span>`;
     const loc = (a.lat_grid && a.lng_grid)
       ? `${a.lat_grid.toFixed(1)}°N ${Math.abs(a.lng_grid).toFixed(1)}°W`
       : "—";
+    const blocked = a.status === "blocked";
     return `<tr>
-      <td style="color:var(--mid);white-space:nowrap">${a.activated_on?.slice(0,16).replace("T"," ")||"—"}</td>
-      <td><span class="mono">${a.license_key}</span></td>
-      <td>${a.company||"—"}</td>
+      <td style="color:var(--mid);white-space:nowrap">${when(a.activated_on)}</td>
+      <td><span class="mono">${esc(a.license_key)}</span></td>
+      <td>${esc(a.company || "—")}</td>
+      <td>${a.branch ? esc(a.branch) : '<span class="muted">—</span>'}</td>
+      <td>${a.label ? esc(a.label) : '<span class="muted">—</span>'}</td>
       <td>${badge}</td>
-      <td style="color:var(--mid);font-size:12px">${a.ip_address||"—"}</td>
-      <td style="color:var(--mid);font-size:12px">${loc}</td>
-      <td><button class="${a.status==='blocked'?'btn-sm btn-amber':'btn-sm btn-red'}"
-        onclick="toggleBlock('${a.device_hash}','${a.status==='blocked'?'unblock':'block'}')"
-        style="font-size:11px;padding:4px 10px">${a.status==='blocked'?'Unblock':'Block'}</button></td>
+      <td class="muted">${esc(a.ip_address || "—")}</td>
+      <td class="muted">${loc}</td>
+      <td class="muted">${when(a.last_check)}</td>
+      <td><button class="${blocked ? 'btn-amber' : 'btn-red'}" style="font-size:11px;padding:4px 10px"
+        onclick="toggleBlock(${i})">${blocked ? 'Unblock' : 'Block'}</button></td>
     </tr>`;
   }).join("");
 }
@@ -665,14 +952,12 @@ function showMsg(id, msg, ok) {
   el.className = ok ? "success-msg" : "error-msg";
 }
 
-async function toggleBlock(deviceHash, action) {
-  if (!confirm(`Are you sure you want to ${action} this device?`)) return;
-  const r = await apiFetch("/api/admin/block", {
-    method: "POST",
-    body: JSON.stringify({ device_hash: deviceHash, action })
-  });
-  const data = await r.json();
-  if (r.ok) { await loadAll(); }
+async function toggleBlock(i) {
+  const a = activationData[i]; if (!a) return;
+  const action = a.status === "blocked" ? "unblock" : "block";
+  if (!confirm(`${action === "block" ? "Block" : "Unblock"} this phone on ${a.license_key}?`)) return;
+  const { ok, data } = await apiPost("/api/admin/block", { device_hash: a.device_hash, action });
+  if (ok) { await loadAll(); }
   else { alert("Error: " + (data.error || "Unknown")); }
 }
 
@@ -689,20 +974,15 @@ function getTrialKeys() {
 }
 
 function renderTrialKeys() {
-  const today = new Date().toISOString().slice(0, 10);
   const todayMs = Date.now();
   const trialKeys = getTrialKeys();
-  const counts = {};
-  activationData.filter(a => a.status === "active").forEach(a => {
-    counts[a.license_key] = (counts[a.license_key] || 0) + 1;
-  });
 
   const strip = document.getElementById("trial-status-row");
   if (trialKeys.length === 0) {
     strip.innerHTML = '<div class="stat-card" style="flex:1"><div class="num" style="font-size:18px;color:var(--mid)">No trial keys yet</div><div class="lbl">Generate your first one below</div></div>';
   } else {
     strip.innerHTML = trialKeys.map(k => {
-      const active = counts[k.key] || 0;
+      const active = k.active || 0;
       const expMs = new Date(k.expires_on).getTime();
       const daysLeft = Math.ceil((expMs - todayMs) / 86400000);
       const pct = Math.round(active / k.max_devices * 100);
@@ -712,7 +992,7 @@ function renderTrialKeys() {
       const color = expired || full ? "var(--red)" : expiring ? "var(--amber)" : "var(--green)";
       const statusText = expired ? "Expired" : full ? "Full" : expiring ? `${daysLeft}d left ⚠️` : `${daysLeft}d left`;
       return `<div class="stat-card" style="min-width:200px;border-color:${color}">
-        <div class="num" style="color:${color};font-size:20px;font-family:var(--mono)">${k.key}</div>
+        <div class="num" style="color:${color};font-size:20px;font-family:var(--mono)">${esc(k.key)}</div>
         <div class="lbl" style="margin-top:6px">${statusText} · ${active}/${k.max_devices} devices (${pct}%)</div>
       </div>`;
     }).join("");
@@ -724,27 +1004,26 @@ function renderTrialKeys() {
     return;
   }
 
-  tbody.innerHTML = trialKeys.map(k => {
-    const active = counts[k.key] || 0;
+  tbody.innerHTML = trialKeys.map((k, i) => {
+    const active = k.active || 0;
     const expMs = new Date(k.expires_on).getTime();
     const daysLeft = Math.ceil((expMs - todayMs) / 86400000);
     const expired = daysLeft <= 0;
     const expiring = daysLeft > 0 && daysLeft <= 30;
     const full = active >= k.max_devices;
-    const badge = expired ? '<span class="badge badge-err">Expired</span>'
+    const badge = k.status === "off" ? '<span class="badge badge-blk">Switched off</span>'
+                : expired ? '<span class="badge badge-err">Expired</span>'
                 : full    ? '<span class="badge badge-err">Full</span>'
                 : expiring ? '<span class="badge badge-warn">Expiring soon</span>'
                 :             '<span class="badge badge-ok">Active</span>';
-    const appStoreText = `Try BusRoute free — 90-day trial: enter key ${k.key} when the app opens. Android & iPhone. No sign-up needed. busroute.app`;
-    const escapedText = appStoreText.replace(/'/g, "\\'");
     return `<tr>
-      <td><span class="mono">${k.key}</span></td>
+      <td><span class="mono">${esc(k.key)}</span></td>
       <td>${badge}</td>
       <td style="color:${expired ? "var(--red)" : expiring ? "var(--amber)" : "var(--green)"}">${expired ? "Expired" : daysLeft + " days"}</td>
       <td>${active} / ${k.max_devices}</td>
-      <td style="color:var(--mid)">${k.expires_on}</td>
+      <td style="color:var(--mid)">${esc(k.expires_on)}</td>
       <td>
-        <button class="btn-sm" onclick="copyTrialText('${escapedText}')" title="${appStoreText}">
+        <button class="btn-sm" onclick="copyTrialText(${i})" title="${esc(trialText(k))}">
           Copy App Store line
         </button>
       </td>
@@ -752,8 +1031,13 @@ function renderTrialKeys() {
   }).join("");
 }
 
-function copyTrialText(text) {
-  navigator.clipboard.writeText(text).then(() => {
+function trialText(k) {
+  return `Try BusRoute free — 90-day trial: enter key ${k.key} when the app opens. Android & iPhone. No sign-up needed. busroute.app`;
+}
+
+function copyTrialText(i) {
+  const k = getTrialKeys()[i]; if (!k) return;
+  navigator.clipboard.writeText(trialText(k)).then(() => {
     showMsg("trial-msg", "✓ Copied to clipboard — paste into your App Store description.", true);
     setTimeout(() => { document.getElementById("trial-msg").textContent = ""; }, 4000);
   });
@@ -766,28 +1050,10 @@ async function createTrialKey() {
   let companyId = getTrialCompanyId();
   if (!companyId) {
     showMsg("trial-msg", "Creating App Store Trial company…", true);
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 12000);
-      const r = await fetch(API_BASE + "/api/admin/companies", {
-        method: "POST",
-        headers: { "X-Admin-Secret": adminSecret, "Content-Type": "application/json" },
-        body: JSON.stringify({ name: TRIAL_COMPANY_NAME, prefix: "TR" }),
-        signal: ctrl.signal
-      });
-      clearTimeout(t);
-      const data = await r.json();
-      if (!r.ok) {
-        const errText = (data.error || "").toLowerCase();
-        if (!errText.includes("duplicate") && !errText.includes("exist") && !errText.includes("unique")) {
-          showMsg("trial-msg", "Could not create trial company: " + (data.error || "HTTP " + r.status), false);
-          return;
-        }
-        showMsg("trial-msg", "Company may already exist — reloading…", true);
-      }
-    } catch(e) {
-      const msg = e.name === "AbortError" ? "Timed out creating company — reloading to check…" : "Network error: " + e.message;
-      showMsg("trial-msg", msg, false);
+    const { ok, data } = await apiPost("/api/admin/companies", { name: TRIAL_COMPANY_NAME, prefix: "TR" });
+    if (!ok && data.error && !/already|exist|unique/i.test(data.error)) {
+      showMsg("trial-msg", "Could not create trial company: " + data.error, false);
+      return;
     }
     await loadAll();
     companyId = getTrialCompanyId();
@@ -807,35 +1073,17 @@ async function createTrialKey() {
   const expiresOn = expiresDate.toISOString().slice(0, 10);
 
   showMsg("trial-msg", "Generating key…", true);
-  try {
-    const ctrl2 = new AbortController();
-    const t2 = setTimeout(() => ctrl2.abort(), 12000);
-    const r2 = await fetch(API_BASE + "/api/admin/keys", {
-      method: "POST",
-      headers: { "X-Admin-Secret": adminSecret, "Content-Type": "application/json" },
-      body: JSON.stringify({ company_id: companyId, max_devices: maxDevices, notes, expires_on: expiresOn }),
-      signal: ctrl2.signal
-    });
-    clearTimeout(t2);
-    const data2 = await r2.json();
-    if (!r2.ok) {
-      showMsg("trial-msg", "Error generating key: " + (data2.error || "HTTP " + r2.status), false);
-      return;
-    }
-    if (data2.expires_on !== expiresOn) {
-      noteEl.style.display = "block";
-      noteEl.innerHTML = "⚠️ Requested expiry <strong>" + expiresOn + "</strong> but server set <strong>" +
-        data2.expires_on + "</strong>. The server does not yet accept a custom expiry date — " +
-        "a small server-side change is needed. The key is otherwise valid.";
-    }
-    showMsg("trial-msg", "✓ Key created: " + data2.key + "  ·  Expires: " + data2.expires_on + "  ·  Devices: " + data2.max_devices, true);
-    await loadAll();
-  } catch(e) {
-    showMsg("trial-msg",
-      e.name === "AbortError"
-        ? "Timed out — reload the page and check the Trial Keys table before trying again."
-        : "Network error: " + e.message, false);
+  const { ok, data } = await apiPost("/api/admin/keys", { company_id: companyId, max_devices: maxDevices, notes, expires_on: expiresOn });
+  if (!ok) {
+    showMsg("trial-msg", "Error generating key: " + (data.error || "unknown"), false);
+    return;
   }
+  if (data.expires_on !== expiresOn) {
+    noteEl.style.display = "block";
+    noteEl.textContent = `⚠️ Requested expiry ${expiresOn} but the server set ${data.expires_on}.`;
+  }
+  showMsg("trial-msg", "✓ Key created: " + data.key + "  ·  Expires: " + data.expires_on + "  ·  Devices: " + data.max_devices, true);
+  await loadAll();
 }
 
 function copyUrl(url) {
@@ -1080,10 +1328,16 @@ function buildStopDetail(s) {
 
   // Turn instructions
   const turns = Array.isArray(s.turn_instructions) ? s.turn_instructions.filter(Boolean) : [];
-  if (turns.length) parts.push(`<div class="det-section"><div class="det-label">Turn instructions</div>${turns.map(t=>`<div class="det-turn">${t}</div>`).join("")}</div>`);
+  if (turns.length) parts.push(`<div class="det-section"><div class="det-label">Turn instructions</div>${turns.map(t=>`<div class="det-turn">${t.instruction || t}</div>`).join("")}</div>`);
 
   // OSRM guidance
-  if (s.osrm_guidance) parts.push(`<div class="det-section"><div class="det-label">OSRM guidance</div><div class="det-muted">${s.osrm_guidance}</div></div>`);
+  if (s.osrm_guidance && Array.isArray(s.osrm_guidance.steps) && s.osrm_guidance.steps.length) {
+    const stepHtml = s.osrm_guidance.steps.map(step => {
+      const road = step.roadName ? ` onto ${step.roadName}` : '';
+      return `<div class="det-muted">${step.instruction}${road}</div>`;
+    }).join('');
+    parts.push(`<div class="det-section"><div class="det-label">OSRM guidance</div>${stepHtml}</div>`);
+  }
 
   // Waypoints
   const wpCount = Array.isArray(s.waypoints_from_prev) ? s.waypoints_from_prev.length : null;
